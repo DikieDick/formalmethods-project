@@ -1,0 +1,16 @@
+name = "models-of-untyped-lambda-calc"
+defaultTargets = ["src"]
+
+[leanOptions]
+pp.unicode.fun = true # pretty-prints `fun a ↦ b`
+autoImplicit = false
+relaxedAutoImplicit = false
+
+[[require]]
+name = "mathlib"
+git = "https://github.com/leanprover-community/mathlib4"
+rev = "v4.21.0"
+
+[[lean_lib]]
+name = "src"
+
