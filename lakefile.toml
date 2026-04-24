@@ -9,7 +9,12 @@ relaxedAutoImplicit = false
 [[require]]
 name = "mathlib"
 git = "https://github.com/leanprover-community/mathlib4"
-rev = "v4.21.0"
+rev = "v4.30.0-rc2"
+
+[[require]]
+name = "cslib"
+git = "https://github.com/leanprover/cslib"
+rev = "main"
 
 [[lean_lib]]
 name = "src"
