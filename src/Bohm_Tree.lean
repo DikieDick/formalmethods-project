@@ -1,6 +1,6 @@
 import Cslib.Languages.LambdaCalculus.LocallyNameless.Untyped.Basic
-import Cslib.Languages.LambdaCalculus.LocallyNameless.Untyped.FullBeta
 import Mathlib.Tactic
+import src.BetaEquiv
 
 open Cslib
 open LambdaCalculus.LocallyNameless.Untyped
@@ -10,8 +10,8 @@ universe u
 variable {Var : Type u}
 
 inductive isHeadRedexApp : Term Var → Prop where
-  | base N P₁ : isHeadRedexApp (Term.app (Term.abs N) P₁)
-  | step T Pₙ : isHeadRedexApp T -> isHeadRedexApp (Term.app T Pₙ)
+  | base N P₁ : isHeadRedexApp ((Term.abs N).app P₁)
+  | step T Pₙ : isHeadRedexApp T -> isHeadRedexApp (T.app Pₙ)
 
 inductive isHeadRedex : Term Var → Prop where
   | base T : isHeadRedexApp T -> isHeadRedex T
@@ -20,7 +20,7 @@ inductive isHeadRedex : Term Var → Prop where
 inductive isHeadNormalApp : Term Var → Prop where
   | base_free y : isHeadNormalApp (Term.fvar y)
   | base_bound n : isHeadNormalApp (Term.bvar n)
-  | step T Pₙ : isHeadNormalApp T -> isHeadNormalApp (Term.app T Pₙ)
+  | step T Pₙ : isHeadNormalApp T -> isHeadNormalApp (T.app Pₙ)
 
 inductive isHeadNormal : Term Var → Prop where
   | base T : isHeadNormalApp T -> isHeadNormal T
@@ -54,24 +54,21 @@ def nfoldApp : List (Term Var) → Term Var → Term Var
 | [], T => T
 | a :: as, T => nfoldApp as (T.app a)
 
--- Placeholder for now
-inductive isBetaEquiv : Term Var → Term Var → Prop where
-
-inductive betaEquivList : List (Term Var) → List (Term Var) → Prop where
-  | base : betaEquivList [] []
-  | step as bs T₁ T₂ : isBetaEquiv T₁ T₂ → betaEquivList as bs → betaEquivList (T₁ :: as) (T₂ :: bs)
+inductive List.BetaEquiv : List (Term Var) → List (Term Var) → Prop where
+  | base : [].BetaEquiv []
+  | step as bs T₁ T₂ : T₁.BetaEquiv T₂ → as.BetaEquiv bs → (T₁ :: as).BetaEquiv (T₂ :: bs)
 
 -- Reduction does not affect the number of leading abstractions, the head variable, or the number of arguments of the head-variable
 lemma reduction_preservation (n m : ℕ) (y z : Var) (Ps Qs : List (Term Var)) :
-    Term.Beta (nfoldAbs n (nfoldApp Ps (Term.fvar y))) (nfoldAbs m (nfoldApp Qs (Term.fvar z))) ->
-    n = m ∧ y = z ∧ betaEquivList Ps Qs := by
+    (nfoldAbs n (nfoldApp Ps (Term.fvar y))).Beta (nfoldAbs m (nfoldApp Qs (Term.fvar z))) ->
+    n = m ∧ y = z ∧ Ps.BetaEquiv Qs := by
   sorry
 
 -- Lemma 3.5
 lemma hnfs_similar (n m : ℕ) (y z : Var) (Ps Qs : List (Term Var)) (M : Term Var) :
-    isBetaEquiv M (nfoldAbs n (nfoldApp Ps (Term.fvar y))) ->
-    isBetaEquiv M (nfoldAbs m (nfoldApp Qs (Term.fvar z))) ->
-    n = m ∧ y = z ∧ betaEquivList Ps Qs := by
+    M.BetaEquiv (nfoldAbs n (nfoldApp Ps (Term.fvar y))) ->
+    M.BetaEquiv (nfoldAbs m (nfoldApp Qs (Term.fvar z))) ->
+    n = m ∧ y = z ∧ Ps.BetaEquiv Qs := by
   sorry
 
 -- coinductive BöhmTree : Type where
