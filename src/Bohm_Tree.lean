@@ -1,9 +1,11 @@
 import Cslib.Languages.LambdaCalculus.LocallyNameless.Untyped.Basic
 import Mathlib.Tactic
+import Coinductive
 import src.BetaEquiv
 
 open Cslib
 open LambdaCalculus.LocallyNameless.Untyped
+open Coinductive
 
 universe u
 
@@ -71,9 +73,36 @@ lemma hnfs_similar (n m : ℕ) (y z : Var) (Ps Qs : List (Term Var)) (M : Term V
     n = m ∧ y = z ∧ Ps.BetaEquiv Qs := by
   sorry
 
--- coinductive BöhmTree : Type where
---   | no_hnf : BöhmTree
---   | hnf : List BöhmTree → BöhmTree
---
--- -- Definition 3.7
--- def BT : Term Var → BöhmTree
+inductive BöhmTreeF (T : Type u) : Type u where
+  | no_hnf
+  | hnf (n : ℕ) (branches : Fin n → T)
+
+instance : Inhabited (BöhmTreeF PUnit) where default := .no_hnf
+
+inductive BöhmTreeF.in : Type u where
+  | no_hnf
+  | hnf (n : ℕ)
+
+instance : PF BöhmTreeF where
+  P := ⟨BöhmTreeF.in, fun
+    | .no_hnf => PEmpty
+    | .hnf n => Fin n⟩
+  unpack
+    | .no_hnf => .obj (.no_hnf) nofun
+    | .hnf n f => .obj (.hnf n) f
+  pack
+    | .obj (.no_hnf) _ => .no_hnf
+    | .obj (.hnf n) f => .hnf n f
+  unpack_pack := by rintro _ ⟨⟩ <;> simp
+  pack_unpack := by rintro _ (⟨⟨⟩, _⟩ | ⟨⟨⟩⟩) <;> simp ; funext x ; cases x
+
+abbrev BöhmTree := CoInd BöhmTreeF
+abbrev BöhmTreeN (n : Nat) : Type u := CoIndN BöhmTreeF n
+
+def BöhmTree.fold (t : BöhmTreeF BöhmTree) : BöhmTree := CoInd.fold _ t
+def BöhmTree.unfold (t : BöhmTree) : BöhmTreeF BöhmTree := CoInd.unfold _ t
+def BöhmTree.no_hnf : BöhmTree := BöhmTree.fold .no_hnf
+def BöhmTree.hnf (n : ℕ) (f : Fin n → BöhmTree) : BöhmTree := BöhmTree.fold (.hnf n f)
+
+-- Definition 3.7
+def BT : Term Var → BöhmTree := sorry
