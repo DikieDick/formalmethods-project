@@ -1,4 +1,4 @@
-import Cslib
+import Cslib.Languages.LambdaCalculus.LocallyNameless.Untyped.FullBeta
 
 namespace Cslib
 namespace LambdaCalculus.LocallyNameless.Untyped.Term
