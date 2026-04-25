@@ -7,14 +7,19 @@ autoImplicit = false
 relaxedAutoImplicit = false
 
 [[require]]
-name = "mathlib"
-git = "https://github.com/leanprover-community/mathlib4"
-rev = "v4.30.0-rc2"
+name = "coinductive"
+git = "https://github.com/ISTA-PLV/coinductive"
+rev = "main"
 
 [[require]]
 name = "cslib"
 git = "https://github.com/leanprover/cslib"
 rev = "main"
+
+[[require]]
+name = "mathlib"
+git = "https://github.com/leanprover-community/mathlib4"
+rev = "v4.30.0-rc2"
 
 [[lean_lib]]
 name = "src"
