@@ -2,3 +2,4 @@
 
 ### Sources
 - https://www.cs.ru.nl/~herman/onderwijs/semantics2025/model_untyped_lambda.pdf
+- https://github.com/andrejbauer/partial-combinatory-algebras/tree/main/PartialCombinatoryAlgebras
