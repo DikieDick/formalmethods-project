@@ -114,10 +114,10 @@ coinductive BT (Var : Type u) : Term Var → BöhmTree Var → Prop where
   | no_hnf (T : Term Var) :
       ¬(exists n Ps y, hasAsHnf T n Ps y) →
       BT Var T BöhmTree.no_hnf
-  | hnf_fvar (T : Term Var) (n : ℕ) (na : ℕ) (t : bfvar Var) (Ps : Vector (Term Var) n) (y : bfvar Var) (Ts : ULift (Fin n) → BöhmTree Var) :
-      hasAsHnf T n Ps.toList y →
-      forall (m : ULift (Fin n)), BT Var (Ps.get m.down) (Ts m) →
-      BT Var T (BöhmTree.hnf n na t Ts)
+  | hnf (term : Term Var) (num_children : ℕ) (term_num_abs : ℕ) (term_base_var : bfvar Var) (term_apps : Vector (Term Var) num_children) (subtrees : ULift (Fin num_children) → BöhmTree Var) :
+      hasAsHnf term term_num_abs term_apps.toList term_base_var →
+      (forall (m : ULift (Fin num_children)), BT Var term_apps[m.down] (subtrees m)) →
+      BT Var term (BöhmTree.hnf num_children term_num_abs term_base_var subtrees)
 
 --                        λ x .                f      (           x                 x )
 def omega_f : Term Var := Term.abs ((Term.bvar 1).app ((Term.bvar 0).app (Term.bvar 0)))
@@ -127,5 +127,41 @@ def Ycombinator : Term Var := Term.abs ((Term.bvar 0).app (omega_f.app omega_f))
 coinductive is_inf_Ytree : BöhmTree Var → Prop where
   | Is_inf_Ytree T : is_inf_Ytree T → is_inf_Ytree (BöhmTree.hnf 1 0 ⟨Term.bvar 0, by simp⟩ (λ _ ↦ T))
 
-lemma Ycombinator_tree T : is_inf_Ytree T → BT Var Ycombinator (BöhmTree.hnf 1 1 ⟨Term.bvar 0, by simp⟩ (λ _ ↦ T)) := by
+lemma inf_Ytree_equal (T₁ T₂ : BöhmTree Var) : is_inf_Ytree T₁ → is_inf_Ytree T₂ → T₁ = T₂ := by
   sorry
+
+lemma omega_f_beta_f : omega_f.app omega_f ≡βᶠ (@Term.bvar Var 0).app (omega_f.app omega_f) := by
+  sorry
+
+lemma Ycombinator_tree T : is_inf_Ytree T → BT Var Ycombinator (BöhmTree.hnf 1 1 ⟨Term.bvar 0, by simp⟩ (λ _ ↦ T)) := by
+  intro Ytree
+  apply BT.hnf _ _ _ _ ⟨Term.bvar 0, by simp⟩ [(omega_f.app omega_f)].toArray.toVector
+  · simp [hasAsHnf, nfoldAbs, nfoldApp]
+    constructor
+    · apply isHeadNormal.step
+      apply isHeadNormal.base
+      apply isHeadNormalApp.step
+      apply isHeadNormalApp.base_bound
+    · apply Relation.EqvGen.refl
+  · simp
+    apply BT.coinduct Var (fun term tree ↦ is_inf_Ytree tree ∧ term = omega_f.app omega_f)
+    · rintro term tree ⟨prop_tree, prop_term⟩
+      right
+      use 1, 0, ⟨Term.bvar 0, by simp⟩, #v[omega_f.app omega_f], (λ _ ↦ T)
+      simp
+      constructor
+      · simp [hasAsHnf, nfoldAbs, nfoldApp]
+        constructor
+        · apply isHeadNormal.base
+          apply isHeadNormalApp.step
+          apply isHeadNormalApp.base_bound
+        · rw [prop_term]
+          exact omega_f_beta_f
+      · constructor
+        · assumption
+        cases prop_tree
+        rw [inf_Ytree_equal T _]
+        · assumption
+        · assumption
+    · simp
+      assumption
