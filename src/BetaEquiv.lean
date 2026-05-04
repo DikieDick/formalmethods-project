@@ -1,28 +1,29 @@
 import Cslib.Languages.LambdaCalculus.LocallyNameless.Untyped.FullBeta
 
+import src.ChurchRosser
+
 namespace Cslib
-namespace LambdaCalculus.LocallyNameless.Untyped.Term
+namespace LambdaCalculus.LocallyNameless.Untyped
+
+open Term
 
 universe u
-variable {Var : Type u}
+variable {Var : Type u} [HasFresh Var] [DecidableEq Var]
 
-#check Relation.ReflTransGen
-#check Relation.EqvGen
+notation3 t:39 " →βᶠ " t':39 => t ⭢βᶠ t'
 
-def MultiBeta {Var : Type u} : Term Var → Term Var → Prop :=
-  Relation.ReflTransGen $ FullBeta (Var := Var)
+def Term.BetaEquiv : Term Var → Term Var → Prop :=
+  Relation.EqvGen FullBeta
 
-notation M " ⭢βᶠ* " N => MultiBeta M N
+instance : Equivalence (@BetaEquiv Var) :=
+  Relation.EqvGen.is_equivalence FullBeta
 
-def BetaEquiv {Var : Type u} : Term Var → Term Var → Prop :=
-  Relation.EqvGen $ FullBeta (Var := Var)
-
-notation M " ≡βᶠ " N => BetaEquiv M N
+notation M " ≡β " N => BetaEquiv M N
 
 def idTerm := Term.abs $ @Term.bvar ℕ 0
 def betaRedex := Term.app (Term.abs $ @Term.bvar ℕ 0) (Term.abs $ @Term.bvar ℕ 0)
 
-lemma test : betaRedex ⭢βᶠ idTerm := by
+lemma test : betaRedex →βᶠ idTerm := by
   constructor
   constructor
   apply LC.abs
@@ -32,18 +33,18 @@ lemma test : betaRedex ⭢βᶠ idTerm := by
   grind
   exact Finset.empty
 
-example : betaRedex ⭢βᶠ* idTerm := by
+example : betaRedex ↠βᶠ idTerm := by
   apply Relation.ReflTransGen.single
   apply test
 
-example : betaRedex ≡βᶠ idTerm := by
+example : betaRedex ≡β idTerm := by
   apply Relation.EqvGen.rel
   apply test
 
-example : idTerm ≡βᶠ idTerm := by
+example : idTerm ≡β idTerm := by
   apply Relation.EqvGen.refl
 
-example : idTerm ≡βᶠ betaRedex := by
+example : idTerm ≡β betaRedex := by
   apply Relation.EqvGen.symm
   apply Relation.EqvGen.rel
   apply test
@@ -67,3 +68,20 @@ example : ¬ normalForm betaRedex := by
   push Not
   use idTerm
   apply test
+
+
+lemma betaEquiv_of_multiBeta (M N : Term Var) (hM : M.LC) (hN : N.LC) : (M ↠βᶠ N) → M ≡β N := by
+  intro h
+  induction h with
+  | refl => apply Relation.EqvGen.refl
+  | tail h₁ h₂ h₃ =>
+    expose_names -- TODO
+    have hb : b.LC := by
+      have := FullBeta.steps_lc_or_rfl h₁
+      cases this with
+      | inl h => exact h.right
+      | inr h => rwa [<- h]
+    have hm := h₃ hb
+    apply Relation.EqvGen.trans M b c
+    · exact hm
+    · constructor; assumption
