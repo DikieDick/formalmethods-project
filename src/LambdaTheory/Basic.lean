@@ -21,30 +21,54 @@ class LambdaTheory (rel: Term Var → Term Var → Prop) where
   trans (M N P : Term Var) : rel M N → rel N P → rel M P
   sym (M N : Term Var): rel M N → rel N M
 
+inductive ThLambdaBeta : Term Var → Term Var → Prop
+| beta (M N) : FullBeta M N → ThLambdaBeta M N
+| app (M N P Q) : ThLambdaBeta M N → ThLambdaBeta P Q → ThLambdaBeta (app M P) (app N Q)
+-- | xi (M N) : LambdaBeta M N →
+| refl (M) : ThLambdaBeta M M
+| trans (M N P) : ThLambdaBeta M N → ThLambdaBeta N P → ThLambdaBeta M P
+| sym (M N): ThLambdaBeta M N → ThLambdaBeta N M
+
+instance : @LambdaTheory Var (ThLambdaBeta) :=
+  ⟨ThLambdaBeta.beta, ThLambdaBeta.app, ThLambdaBeta.refl, ThLambdaBeta.trans, ThLambdaBeta.sym⟩
+
+lemma ThLambdaBeta_of_BetaEquiv {M N : Term Var} (h : M ≡β N) : ThLambdaBeta M N := by
+  induction h with
+  | rel _ _ h => apply ThLambdaBeta.beta; assumption
+  | refl => apply ThLambdaBeta.refl
+  | symm M N h ih => apply ThLambdaBeta.sym; assumption
+  | trans M N P h₁ h₂ ih₁ ih₂ =>
+    apply ThLambdaBeta.trans M N P
+    · assumption
+    · assumption
+
+lemma BetaEquiv_of_ThLambdaBeta {M N : Term Var} (h : ThLambdaBeta M N) : M ≡β N := by
+  induction h with
+  | beta M N h => apply Relation.EqvGen.rel; exact h
+  | refl M => apply Relation.EqvGen.refl
+  | sym M N h ih => apply Relation.EqvGen.symm; exact ih
+  | trans M N P h₁ h₂ ih₁ ih₂ =>
+    apply Relation.EqvGen.trans M N P
+    · assumption
+    · assumption
+  | app M N P Q h₁ h₂ ih₁ ih₂ =>
+    sorry
+
+lemma ThLambdaBeta_iff_BetaEquiv {M N : Term Var} : ThLambdaBeta M N ↔ M ≡β N :=
+  ⟨BetaEquiv_of_ThLambdaBeta, ThLambdaBeta_of_BetaEquiv⟩
 
 variable {r : Term Var → Term Var → Prop} [LambdaTheory r]
-
-@[simp, grind .]
-lemma ThEq_of_BetaEquiv {M N : Term Var} {r : Term Var → Term Var → Prop} [LambdaTheory r] (h : M ≡β N) : r M N := by
-  induction h with
-  | rel _ _ h => apply LambdaTheory.beta; assumption
-  | refl => apply LambdaTheory.refl
-  | symm M N h ih => apply LambdaTheory.sym; assumption
-  | trans M N P h₁ h₂ ih₁ ih₂ =>
-    apply LambdaTheory.trans M N P
-    · assumption
-    · assumption
 
 -- This way we can use calc blocks when reasoning over equality in a theory
 instance : Trans r r r where
   trans {M N P} h1 h2 := LambdaTheory.trans M N P h1 h2
 
 @[refl]
-lemma refl' (M : Term Var) : r M M :=
+lemma LambdaTheory_refl (M : Term Var) : r M M :=
   LambdaTheory.refl M
 
 @[symm]
-lemma sym' {M N : Term Var} (h : r M N) : r N M :=
+lemma LambdaTheory_symm {M N : Term Var} (h : r M N) : r N M :=
   LambdaTheory.sym M N h
 
 lemma app_left {M N : Term Var} (P : Term Var) (h : r M N) :
