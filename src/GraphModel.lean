@@ -426,71 +426,111 @@ instance isCA : CA (Set α) where
   eq_K := eq_K
   eq_S := eq_S
 
+def F (X : Set α) (Y : Set α) : Set α :=
+  apply X Y
+
+def G_old (f : Set α → Set α) : Set α :=
+fun x => ∃ b β, x = pair b β ∧ b ∈ f (toSet β)
+
+def G (f : Set α → Set α) : Set α := { x | ∃ b β, x = pair b β ∧ b ∈ f (toSet β) }
+
+lemma G_old_eq_G (f : Set α → Set α):  G_old f = G f := by
+  unfold G
+  unfold G_old
+  ext z
+  constructor
+  · rintro ⟨a, b, rfl, hb⟩
+    use a, b
+  · rintro ⟨x, y, rfl, hx⟩
+    use x, y
+
+lemma pair_iff (a b x y : α): pair x y = pair a b ↔ (x=a ∧ y=b) := by sorry
+
+lemma fY_set (f : Set α → Set α) (Y : Set α)
+(h : continuous f):
+f Y = { x | ∃ y, toSet y ⊆ Y ∧ x ∈ f (toSet y) } := by
+  unfold continuous at h
+  ext x
+  constructor
+  · intro hx
+    specialize h Y x
+    obtain ⟨h₁, h₂ ⟩ := h
+    apply h₁ hx
+  · rintro ⟨y, h₁, h₂⟩
+    exact (continuous_monotone h (toSet y) Y h₁) h₂
+
+lemma F_G_eq_id (f : Set α → Set α) (Y : Set α) (h : continuous f ) :
+F (G f) Y = f Y := by
+  rw [fY_set f Y h]
+  unfold F G apply
+  simp
+  ext x
+  constructor
+  · rintro ⟨y, _, a, b, heq, _⟩
+    have h₁ : x= a := by
+      rw [pair_iff] at heq
+      lia
+    have h₂ : y= b := by
+      rw [pair_iff] at heq
+      lia
+    rw [h₁]
+    use b
+    constructor
+    · rw [<-h₂]
+      assumption
+    · assumption
+  · rintro ⟨y, h₁, _⟩
+    use y, h₁, x, y
+
 end GraphModel
 
 namespace Cslib
 namespace LambdaCalculus.LocallyNameless.Untyped.Term
 open Listing
 
-
 variable {α : Type} [Listing α]
 variable (i : α → α)
 variable (hi : Function.Injective i)
 variable {A : Set α}
 
--- def F (X : Set α) (Y : Set α) (i : α → α) : Set α :=
--- {x | ∃ y, toSet y ⊆ Y ∧ i (pair x y) ∈ X}
-
 def apply (S : Set α) : Set α → Set α :=
-  fun T x => ∃ y, toSet y ⊆ T ∧ pair x y ∈ S
+  fun T b => ∃ β, toSet β ⊆ T ∧ pair b β ∈ S
 
 def F (X : Set α) (Y : Set α) : Set α :=
-apply X Y
+  apply X Y
 
-
--- def F (X : Set α) (Y : Set α) : Set α :=
---   fun x => ∃ y, toSet y ⊆ Y ∧ i (pair x y) ∈ X
-
-def G (f : Set α → Set α) (S : Set α) : Set α :=
--- {x | ∃ a b, x = pair a b ∧ toSet a ⊆ S ∧ b ∈ f (toSet a)}
-fun x => ∃ a b, x = pair a b ∧ toSet a ⊆ S ∧ b ∈ f (toSet a)
+def G (f : Set α → Set α) : Set α := { x | ∃ b β, x = pair b β ∧ b ∈ f (toSet β) }
 
 universe u
 variable {Var : Type u} [DecidableEq Var]
 
-def subst_rho (ρ : Var → Set α) (x : Var) (d : Var) : Var → Set α :=
-  fun a => if a = x then ρ d else ρ a
+@[simp]
+def subst_rho (ρ : ℕ → Set α) (n : ℕ) (d : Set α) : ℕ → Set α :=
+  fun x => if x = n then d else ρ x
 
--- def max_debruijn (ρ : Var → Set α) (x : Var) (d : Var) : Var → Set α :=
---   fun a => if a = x then ρ d else ρ a
+lemma subst_rho_zero (ρ : ℕ → Set α) (n : ℕ) (d : Set α) :
+subst_rho ρ 0 d 0 = d
+ := by
+ simp
 
--- rho vector of the size of numbers of bound variables
--- need to shift
+def DeBruijnShift (ρ : ℕ → Set α ): ℕ → Set α :=
+  fun n => ρ (n + 1)
 
-def Interp (ρ : Var → Set α) : Term Var → Set α
-| bvar n  => {}
-| fvar x  => (ρ x) -- not sure
-| app a b => (F (Interp ρ a) (Interp ρ b))
-| abs e => {x | ∃ β b, x = pair β b ∧ toSet β ⊆ Set α ∧ b ∈ (Interp (subst_rho ρ d d) e) }
-| abs e  => G (fun d => (Interp (subst_rho ρ x d) e) )
-
-def Interp_nat (ρ : Nat → Set α) : Term Var → Set α
+@[simp]
+def Interp (ρ : ℕ → Set α) (σ: Var → Set α) : Term Var → Set α
+| fvar x  => (σ x)
 | bvar n  => (ρ n)
-| fvar x  => {x} -- not sure
-| app a b => (F (Interp ρ a) (Interp ρ b))
-| abs e => {x | ∃ β b, x = pair β b ∧ toSet β ⊆ Set α ∧ b ∈ (Interp (subst_rho ρ d d) e) }
-| abs e  => G (fun d => (Interp (subst_rho ρ x d) e) )
+| app a b => (F (Interp ρ σ a) (Interp ρ σ b))
+| abs e   =>  G (fun d => (Interp (subst_rho (DeBruijnShift ρ) 0 d) σ e) )
 
 
-variable {ρ : Var → Set α}
+variable {ρ : ℕ → Set α}
+variable {σ : Var → Set α}
 variable {M : Term Var}
 
--- notation "〚"M"〛" ρ => Interp ρ M
--- notation "〚"M"〛" => Interp _ M
+notation "〚"M"〛_{"ρ","σ"}" => Interp ρ σ M
 
-notation "〚"M"〛_{" ρ "}" => Interp ρ M
-
-#check 〚 M 〛_{ ρ }
+#check 〚 M 〛_{ρ,σ}
 
 @[reducible]
 instance UntypedLambdaCalculus.hasDot : HasDot (Term Var) where dot := app
@@ -503,64 +543,107 @@ def id_id : Term Var := app id id
 def ω : Term Var := abs (app (bvar 0) (bvar 0))
 def Ω : Term Var := app ω ω
 
--- instance UntypedLambdaCalculusisCA : CA (Term Var) where
---   K := K
---   S := S
---   eq_K := by
---     intro a b
---     unfold K
---     sorry
---   eq_S := by
---     intro a b
---     unfold S
---     sorry
-
-#check 〚 id 〛_{ ρ }
-
+#check 〚 id 〛_{ρ,σ}
 
 -- Example 3.1
 lemma interp_id :
-〚 id 〛_{ ρ } = {x | ∃ (β : α), ∃ b, x = (pair β b)}
---  ∧ b ∈ β}
+〚 id 〛_{ρ,σ} = {x | ∃ b, ∃ (β : α), x = (pair b β) ∧ b ∈ toSet β}
  := by
   unfold id
   unfold Interp
-  unfold F
-  sorry
+  unfold G
+  ext x
+  constructor
+  · intro h
+    obtain ⟨b, ⟨β, ⟨h₁, h₂⟩⟩⟩ := h
+    use b, β
+    constructor
+    · assumption
+    · dsimp [Interp] at h₂
+      assumption
+  · intro h
+    obtain ⟨b, ⟨β, ⟨h₁, h₂⟩⟩⟩ := h
+    use b, β
+    constructor
+    · assumption
+    · dsimp [Interp]
+      assumption
 
-lemma interp_id' :
-〚 id 〛_{ ρ } = {x | ∃ (β : α), ∃ b, x = (pair β b)}
---  ∧ b ∈ β}
- := by
-  unfold id
-  unfold Interp
-  unfold F
-  sorry
 
 lemma interp_id_id :
-〚 app id id 〛_{ ρ } = 〚 id 〛_{ ρ }
+〚 app id id 〛_{ρ,σ} = 〚 id 〛_{ρ,σ}
  := by
-  sorry
+  simp
+  unfold F
+  unfold apply
+  ext b
+  have h₁: ∀ b β, pair b β ∈ 〚id〛_{ρ,σ} ↔ b ∈ toSet β := by
+    intro a β
+    sorry
+  constructor
+  · intro h
+    obtain ⟨β, h⟩ := h
+    rw [h₁ b β] at h
+    grind
+  · intro h
+    simp at *
+    obtain ⟨b', β, h₂, h₃⟩ := h
+    use β
+    simp at *
+    rw [h₂]
+    specialize (h₁ ((pair b' β)) β)
+    rw [h₁]
+    rw [<-h₂]
+    sorry
 
 lemma interp_k :
-〚 K 〛_{ ρ } = {x | ∃ (β : α), ∃ γ , ∃ c, x = (pair β, (pair γ c)) }
+〚 K 〛_{ρ,σ} = {x | ∃ β γ c, x = (pair (pair c γ) β) }
  := by
-  sorry
+  unfold K
+  unfold Interp
+  unfold G
+  ext x
+  simp
+  constructor
+  · intro h
+    obtain ⟨b, β, h₁, h₂⟩ := h
+    obtain ⟨c, γ, heq, h₂⟩ := h₂
+    use β, γ, c
+    rwa [heq] at h₁
+  · intro h
+    obtain ⟨β, γ, c, h⟩ := h
+    use ((pair c γ)), β
+    constructor
+    · assumption
+    · unfold G
+      simp
+      use c
+      constructor
+      · use γ
+      · simp [DeBruijnShift]
+        sorry
+
 
 lemma interp_Omega :
-〚 Ω 〛_{ ρ } = ∅
+〚 Ω 〛_{ρ,σ} = ∅
  := by
-  unfold Ω
-  unfold Interp
-  unfold F
-  grind
+  -- grind
+  -- unfold Ω
+  -- unfold Interp
+  -- unfold F
+  -- unfold apply
+  -- grind
   sorry
 
-lemma interp_abs_M (M : Term Var) :
-〚 abs M 〛_{ ρ } = {x | ∃ (β : α), ∃ b, x = (pair β, b)}
--- ∧ b ∈ 〚 abs M 〛_{ ρ } }
- := by
-  sorry
+
+
+--  OLD STUFF!!!
+-- lemma interp_abs_M (M : Term Var) :
+-- 〚 abs M 〛_{ρ,σ} = {x | ∃ (β : α), ∃ b, x = (pair β, b)}
+-- x | ∃ (β : α), ∃ b, x = (pair β b)
+-- -- ∧ b ∈ 〚 abs M 〛_{ ρ } }
+--  := by
+--   sorry
 
 -- inductive Interp where
 --   | empty : BinTree
@@ -583,72 +666,15 @@ def D_i (A : Set α) : ℕ → Set α
 def D_A : Set α := Set.iUnion (D_i A)
 
 
-
-
 -- def rank : ℕ → Set α
 --   | 0       => A
 --   | n + 1 =>  Set.union (D_A n) { x | ∃ β b, x = pair β b ∧ toSet β ⊆ (D_A n) ∧ b ∈ (D_A n) }
-
-
 
 -- inductive D_A (n: ℕ) where
 -- | 0 : A
 -- | S : Expr
 -- | app : Expr → Expr → Expr
 
-
-
-theorem F_G_eq_id
-(f : Set α → Set α) (S : Set α) (Y: Set α)
-(i : α → α) (hi : Function.Injective i)
-:
-F (G f S i) Y i = f Y := by
-  unfold F
-  unfold G
-  simp only [Set.mem_setOf_eq]
-  refine Eq.symm (Set.ext ?_)
-  intro x
-  constructor
-  · intro h
-    simp
-    use x
-    sorry
-  · intro h
-    rw [Set.mem_setOf_eq] at h
-    obtain ⟨y, ⟨h1, ⟨a, ⟨b, ⟨h2,⟨h3,h4⟩⟩⟩⟩⟩ ⟩ := h
-    specialize hi h2
-    have h5: x =  a := by sorry
-    have h6: y =  b := by sorry
-    rw [h5]
-    apply h4
-
-      exact hi.eq_iff
-
-    obtain ⟨h2, h3⟩ := h2
-    obtain ⟨y, h⟩ := h
-    simp in h
-
-  have h: ∃ a b, i (pair x y) = i (pair a b) ∧ toSet a ⊆ S ∧ b ∈ f (toSet a) ↔
-  ext S
-  constructor
-
-  unfold toSet
-  simp
-  rw [Listing.eq_list]
-
-
-
-@F α (G_function f  S) Y =  f Y := by
-  unfold G_function
-
-
-
-
-def G_function (f : Set α → Set α) : Set α :=
-{x | ∃ a b, x = Listing.pair a b ∧ toSet a ⊆ S ∧ b ∈ f (toSet a)}
-
-theorem F_G_eq_id (f : Set α → Set α) (Y: Set α) :
-  G_function f = G_function f := by sorry
 
 
 
