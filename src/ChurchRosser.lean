@@ -47,7 +47,7 @@ theorem ChurchRosserMultiBeta : Relation.ChurchRosser (@multiBeta Var) := by
   · apply Relation.ReflTransGen.single
     exact hyz
 
-theorem ChurchRosserMultiBeta':
+theorem ChurchRosserMultiBeta' {Var : Type u} :
     ∀ (M N : Term Var), multiBeta M N → ∃ P : Term Var, multiBeta M P ∧ multiBeta N P := by
   intro M N hMN
   refine ⟨N, hMN, ?_⟩

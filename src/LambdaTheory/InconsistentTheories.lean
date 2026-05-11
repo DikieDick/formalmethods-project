@@ -21,6 +21,7 @@ variable {Var : Type u} [HasFresh Var] [DecidableEq Var]
 
 section KeqKstar
 
+-- @[mkLambdaTheory]
 inductive ThKeqKstar : Term Var → Term Var → Prop
 | beta (M N) : FullBeta M N → ThKeqKstar M N
 | app (M N P Q) : ThKeqKstar M N → ThKeqKstar P Q → ThKeqKstar (Term.app M P) (Term.app N Q)
@@ -30,8 +31,8 @@ inductive ThKeqKstar : Term Var → Term Var → Prop
 | sym (M N): ThKeqKstar M N → ThKeqKstar N M
 | new : ThKeqKstar K Kstar
 
-instance instKeqKstar : @LambdaTheory Var ThKeqKstar :=
-    ⟨ThKeqKstar.beta, ThKeqKstar.app, ThKeqKstar.refl, ThKeqKstar.trans, ThKeqKstar.sym⟩
+instance instKeqKstar : LambdaTheory (@ThKeqKstar Var) :=
+  ⟨ThKeqKstar.beta, ThKeqKstar.app, ThKeqKstar.refl, ThKeqKstar.trans, ThKeqKstar.sym⟩
 
 lemma ThKeqKstar_of_ThLambdaBeta {M N : Term Var} (h : ThLambdaBeta M N) : ThKeqKstar M N := by
   induction h with
@@ -149,10 +150,9 @@ lemma test (M N : Term Var) (hM : M.LC) : M ^ N = M := by
   grind
 
 -- -- (λx.M)
-lemma helper (M N : Term Var) (hM : M.LC) (hN : N.LC): app (abs M) N ↠βᶠ M:= by
+lemma helper (M N : Term Var) (hM : M.LC) (hN : N.LC): app (abs M) N →βᶠ M:= by
   induction M with
   | abs O ih =>
-    apply Relation.ReflTransGen.single
     apply Xi.base
     have : (O.abs) = (O.abs) ^ N := by grind
     nth_rw 2 [this]
@@ -160,7 +160,6 @@ lemma helper (M N : Term Var) (hM : M.LC) (hN : N.LC): app (abs M) N ↠βᶠ M:
     · grind
     · assumption
   | bvar n =>
-    apply Relation.ReflTransGen.single
     apply Xi.base
     have : bvar n = bvar n ^ N := by
       grind
@@ -169,14 +168,12 @@ lemma helper (M N : Term Var) (hM : M.LC) (hN : N.LC): app (abs M) N ↠βᶠ M:
     · grind
     · assumption
   | fvar x =>
-    apply Relation.ReflTransGen.single
     apply Xi.base
     have : fvar x = fvar x ^ N := by grind
     nth_rw 2 [this]
     constructor <;> try assumption
     grind
   | app M O ih₁ ih₂ =>
-    apply Relation.ReflTransGen.single
     apply Xi.base
     have : (M.app O) = (M.app O) ^ N := by grind
     nth_rw 2 [this]
@@ -187,7 +184,7 @@ lemma helper (M N : Term Var) (hM : M.LC) (hN : N.LC): app (abs M) N ↠βᶠ M:
   -- constructor
 
 
-lemma reduceK {Var : Type u} (M N : Term Var) (hM : M.LC) (hN : N.LC) : (app (app K M) N) ↠βᶠ M := by
+lemma reduceK (M N : Term Var) (hM : M.LC) (hN : N.LC) : (app (app K M) N) ↠βᶠ M := by
   unfold K
   apply Relation.ReflTransGen.tail (b := app (abs M) N)
   · apply Relation.ReflTransGen.single
@@ -204,16 +201,13 @@ lemma reduceK {Var : Type u} (M N : Term Var) (hM : M.LC) (hN : N.LC) : (app (ap
         exact Finset.empty
       · exact Finset.empty
       · exact hM
-  · sorry
-
-
-
+  · apply helper <;> assumption
 
 instance : CoeFun (Term Var) (fun _ => Term Var → Term Var) where
   coe M N := Term.app M N
 
 @[simp]
-lemma K_MN_eq_M (M N : Term Var) (hM : M.LC) (hN : N.LC) : app (app K M) N ≡β M := by
+lemma KMN_eq_M (M N : Term Var) (hM : M.LC) (hN : N.LC) : app (app K M) N ≡β M := by
   apply betaEquiv_of_multiBeta
   · apply LC.app
     · apply LC.app
@@ -225,6 +219,7 @@ lemma K_MN_eq_M (M N : Term Var) (hM : M.LC) (hN : N.LC) : app (app K M) N ≡β
     · assumption
     · assumption
 
+
 local notation:50 M " =K= " N => ThKeqKstar M N
 
 -- We prove that adding K = Kstar results in an inconsistent λ-theory
@@ -235,7 +230,7 @@ lemma K_eq_Kstart_inconsistent {Var : Type u} [instDec : DecidableEq Var] [instF
     simp
     apply ThKeqKstar_of_BetaEquiv
     apply BetaEquiv_symm
-    apply K_MN_eq_M
+    apply KMN_eq_M
     assumption
     assumption
 
@@ -258,30 +253,7 @@ end KeqKstar
 
 section KeqI
 
-open Lean Elab Command
-
-syntax (name := deriveLambdaTheoryInstance)
-"mk_lambda_theory " ident : command
-
-@[command_elab deriveLambdaTheoryInstance]
-def elabDeriveLambdaTheoryInstance : CommandElab
-| `(mk_lambda_theory $thName:ident) => do
-  -- let thStr := thName.getId.toString
-
-  -- let instName := mkIdent <| Name.mkSimple s!"inst{thStr}"
-
-  let beta  := mkIdent <| thName.getId ++ `beta
-  let app   := mkIdent <| thName.getId ++ `app
-  let refl  := mkIdent <| thName.getId ++ `refl
-  let trans := mkIdent <| thName.getId ++ `trans
-  let sym   := mkIdent <| thName.getId ++ `sym
-
-  elabCommand <|
-    ← `(instance : @LambdaTheory Var $thName :=
-          ⟨$beta, $app, $refl, $trans, $sym⟩)
-| _ => throwUnsupportedSyntax
-
--- @[LambdaTheory]
+-- @[mkLambdaTheory]
 inductive ThKeqI : Term Var → Term Var → Prop
 | beta (M N) : FullBeta M N → ThKeqI M N
 | app (M N P Q) : ThKeqI M N → ThKeqI P Q → ThKeqI (Term.app M P) (Term.app N Q)
@@ -291,42 +263,93 @@ inductive ThKeqI : Term Var → Term Var → Prop
 | sym (M N): ThKeqI M N → ThKeqI N M
 | new : ThKeqI K I
 
-mk_lambda_theory ThKeqI
-
--- instance instKeqI : @LambdaTheory Var ThKeqI :=
---     ⟨ThKeqI.beta, ThKeqI.app, ThKeqI.refl, ThKeqI.trans, ThKeqI.sym⟩
-
-lemma ThKeqI_of_ThLambdaBeta {M N : Term Var} (h : ThLambdaBeta M N) : ThKeqI M N := by
-  induction h with
-  | beta _ _ h => apply ThKeqI.beta; assumption
-  | refl P => apply ThKeqI.refl
-  | sym M N h ih => apply ThKeqI.sym; assumption
-  | trans M N P _ _ hMN hNP =>
-    apply ThKeqI.trans M N P
-    · assumption
-    · assumption
-  | app M N P Q hMN hPQ _ _ =>
-    apply ThKeqI.app M N P Q
-    · assumption
-    · assumption
+instance instKeqI : LambdaTheory (@ThKeqI Var) :=
+  ⟨ThKeqI.beta, ThKeqI.app, ThKeqI.refl, ThKeqI.trans, ThKeqI.sym⟩
 
 lemma ThKeqI_of_BetaEquiv {M N : Term Var} (h : M ≡β N) : ThKeqI M N :=
-  ThKeqI_of_ThLambdaBeta (ThLambdaBeta_of_BetaEquiv h)
+  ThEq_of_ThLambdaBeta (ThLambdaBeta_of_BetaEquiv h)
 
 local notation:50 M " =K= " N => ThKeqI M N
 
+lemma I_LC {Var : Type u} : (@I Var).LC := by
+  unfold I
+  apply LC.abs
+  · intro x _
+    grind
+  · exact Finset.empty
+
+lemma reduce_I (M : Term Var) (hM : M.LC) : I M ≡β M := by
+  simp
+  unfold I
+  apply Relation.EqvGen.rel
+  constructor
+  constructor
+  · apply LC.abs
+    intro x _
+    grind
+    exact Finset.empty
+  · assumption
+
 -- M = K M N = I M N = K I I M N = I K I M N = K I M N = I N = N
-theorem KeqI_inconsistent : inconsistent (Var := Var) ThKeqI := by
+theorem KeqI_inconsistent {Var : Type u} [instFresh : HasFresh Var] [instDEq: DecidableEq Var]: inconsistent (Var := Var) ThKeqI := by
   intro M N hM hN
 
   -- Th ⊨ M = N
   -- TODO
-  calc M =K= K M N := by simp; sorry
-    _ =K= I M N := by simp; sorry
-    _ =K= K I I M N := by simp; sorry
-    _ =K= I K I M N := by simp; sorry
-    _ =K= K I M N := by simp; sorry
-    _ =K= I N := by simp; sorry
-    _ =K= N := by simp; sorry
-
+  calc M =K= K M N := by
+        simp
+        apply ThKeqI_of_BetaEquiv
+        apply BetaEquiv_symm
+        apply KMN_eq_M <;> assumption
+    _ =K= I M N := by
+        simp
+        apply app_left₂
+        apply ThKeqI.new
+    _ =K= K I I M N := by
+        simp
+        have := KMN_eq_M (Var:=Var) I I I_LC I_LC
+        apply app_congr
+        apply app_congr
+        apply ThKeqI_of_BetaEquiv
+        apply BetaEquiv_symm
+        apply KMN_eq_M
+        · exact I_LC
+        · exact I_LC
+        · apply LambdaTheory.refl
+        · apply LambdaTheory.refl
+    _ =K= I K I M N := by
+        simp
+        apply app_congr
+        apply app_congr
+        apply app_congr
+        apply app_congr
+        apply ThKeqI.new
+        symm
+        apply ThKeqI.new
+        apply ThKeqI.refl
+        apply ThKeqI.refl
+        apply ThKeqI.refl
+    _ =K= K I M N := by
+        simp
+        apply app_congr
+        apply app_congr
+        apply app_congr
+        apply ThEq_of_BetaEquiv (reduce_I K K_LC)
+        apply ThKeqI.refl
+        apply ThKeqI.refl
+        apply ThKeqI.refl
+    _ =K= I N := by
+      simp
+      apply app_congr
+      apply ThKeqI_of_BetaEquiv
+      apply KMN_eq_M
+      · exact I_LC
+      · assumption
+      apply LambdaTheory.refl
+    _ =K= N := by
+      simp
+      apply ThKeqI_of_BetaEquiv
+      apply reduce_I
+      · assumption
+  exact instKeqI
 end KeqI

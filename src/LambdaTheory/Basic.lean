@@ -42,6 +42,19 @@ lemma ThLambdaBeta_of_BetaEquiv {M N : Term Var} (h : M ≡β N) : ThLambdaBeta 
     · assumption
     · assumption
 
+lemma ThEq_of_ThLambdaBeta {M N : Term Var} {r : Term Var → Term Var → Prop} [LambdaTheory r] (h : ThLambdaBeta M N) : r M N := by
+  induction h with
+  | beta A B h => apply LambdaTheory.beta; assumption
+  | refl P => apply LambdaTheory.refl
+  | sym M N h ih => apply LambdaTheory.sym; assumption
+  | trans M N P _ _ hMN hNP =>
+    apply LambdaTheory.trans M N P <;> assumption
+  | app M N P Q hMN hPQ _ _ =>
+    apply LambdaTheory.app M N P Q <;> assumption
+
+lemma ThEq_of_BetaEquiv {M N : Term Var} {r : Term Var → Term Var → Prop} [LambdaTheory r] (h : M ≡β N) : r M N :=
+  ThEq_of_ThLambdaBeta (ThLambdaBeta_of_BetaEquiv h)
+
 lemma BetaEquiv_of_ThLambdaBeta {M N : Term Var} (h : ThLambdaBeta M N) : M ≡β N := by
   induction h with
   | beta M N h => apply Relation.EqvGen.rel; exact h
@@ -83,7 +96,44 @@ lemma app_left₂ {M N : Term Var} (P Q : Term Var) (h : r M N) :
   r (Term.app (Term.app M P) Q) (Term.app (Term.app N P) Q) :=
   app_left Q (app_left P h)
 
+@[simp, grind .]
+lemma app_congr {M N P Q : Term Var} (h1 : r M N) (h2 : r P Q) : r (app M P) (app N Q) :=
+  LambdaTheory.app M N P Q h1 h2
+
 
 def inconsistent (r : Term Var → Term Var → Prop) [LambdaTheory r] : Prop := ∀ M N : Term Var, M.LC → N.LC → r M N
+
+
+-- public meta section
+-- open Lean Elab Command Meta
+
+-- syntax (name := mkLambdaTheory)
+--   "mkLambdaTheory" : attr
+
+-- initialize registerBuiltinAttribute {
+--   name := `mkLambdaTheory
+--   descr := "Generate a LambdaTheory instance"
+
+--   add := fun declName stx _ => MetaM.run' do
+--     match stx with
+--     | `(attr| mkLambdaTheory) =>
+--         let currNamespace ← getCurrNamespace
+
+--         let beta  := mkIdent <| declName ++ `beta
+--         let app   := mkIdent <| declName ++ `app
+--         let refl  := mkIdent <| declName ++ `refl
+--         let trans := mkIdent <| declName ++ `trans
+--         let sym   := mkIdent <| declName ++ `sym
+--         let thIdent := mkIdent declName
+
+--         liftCommandElabM do
+--           modifyScope ({ · with currNamespace })
+--           elabCommand <|
+--             ← `(instance {Var}: @LambdaTheory Var $thIdent :=
+--                   ⟨$beta, $app, $refl, $trans, $sym⟩)
+--     | _ => throwError "mkLambdaTheory error"
+-- }
+
+-- end
 
 end LambdaTheory
