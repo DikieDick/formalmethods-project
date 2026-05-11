@@ -23,7 +23,6 @@ section KeqKstar
 inductive ThKeqKstar : Term Var → Term Var → Prop
 | beta (M N) : FullBeta M N → ThKeqKstar M N
 | app (M N P Q) : ThKeqKstar M N → ThKeqKstar P Q → ThKeqKstar (Term.app M P) (Term.app N Q)
--- | xi (M N) : LambdaRelated M N → Term.abs
 | refl (M) : ThKeqKstar M M
 | trans (M N P) : ThKeqKstar M N → ThKeqKstar N P → ThKeqKstar M P
 | sym (M N): ThKeqKstar M N → ThKeqKstar N M
@@ -187,7 +186,6 @@ section KeqI
 inductive ThKeqI : Term Var → Term Var → Prop
 | beta (M N) : FullBeta M N → ThKeqI M N
 | app (M N P Q) : ThKeqI M N → ThKeqI P Q → ThKeqI (Term.app M P) (Term.app N Q)
--- | xi (M N) : LambdaRelated M N → Term.abs
 | refl (M) : ThKeqI M M
 | trans (M N P) : ThKeqI M N → ThKeqI N P → ThKeqI M P
 | sym (M N): ThKeqI M N → ThKeqI N M

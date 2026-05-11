@@ -16,7 +16,6 @@ variable {Var : Type u}
 class LambdaTheory (rel: Term Var → Term Var → Prop) where
   beta (M N : Term Var) : FullBeta M N → rel M N
   app (M N P Q : Term Var) : rel M N → rel P Q → rel (Term.app M P) (Term.app N Q)
--- | xi (M N) : LambdaRelated M N → Term.abs
   refl (M : Term Var) : rel M M
   trans (M N P : Term Var) : rel M N → rel N P → rel M P
   sym (M N : Term Var): rel M N → rel N M
@@ -24,7 +23,6 @@ class LambdaTheory (rel: Term Var → Term Var → Prop) where
 inductive ThLambdaBeta : Term Var → Term Var → Prop
 | beta (M N) : FullBeta M N → ThLambdaBeta M N
 | app (M N P Q) : ThLambdaBeta M N → ThLambdaBeta P Q → ThLambdaBeta (app M P) (app N Q)
--- | xi (M N) : LambdaBeta M N →
 | refl (M) : ThLambdaBeta M M
 | trans (M N P) : ThLambdaBeta M N → ThLambdaBeta N P → ThLambdaBeta M P
 | sym (M N): ThLambdaBeta M N → ThLambdaBeta N M
