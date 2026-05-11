@@ -225,7 +225,6 @@ theorem KeqI_inconsistent {Var : Type u} [instFresh : HasFresh Var] [instDEq: De
   intro M N hM hN
 
   -- Th ⊨ M = N
-  -- TODO
   calc M =K= K M N := by
         simp
         apply ThKeqI_of_BetaEquiv
@@ -238,48 +237,32 @@ theorem KeqI_inconsistent {Var : Type u} [instFresh : HasFresh Var] [instDEq: De
     _ =K= K I I M N := by
         simp
         have := KMN_eq_M (Var:=Var) I I I_LC I_LC
-        apply app_congr
-        apply app_congr
+        apply app_congr _ (LambdaTheory.refl N)
+        apply app_congr _ (LambdaTheory.refl M)
         apply ThKeqI_of_BetaEquiv
         apply BetaEquiv_symm
-        apply KMN_eq_M
-        · exact I_LC
-        · exact I_LC
-        · apply LambdaTheory.refl
-        · apply LambdaTheory.refl
+        exact KMN_eq_M I I I_LC I_LC
     _ =K= I K I M N := by
         simp
-        apply app_congr
-        apply app_congr
-        apply app_congr
-        apply app_congr
+        apply app_congr _ (LambdaTheory.refl N)
+        apply app_congr _ (LambdaTheory.refl M)
+        apply app_congr _ (LambdaTheory.refl I)
+        apply app_congr _ (ThKeqI.sym K I ThKeqI.new)
         apply ThKeqI.new
-        symm
-        apply ThKeqI.new
-        apply ThKeqI.refl
-        apply ThKeqI.refl
-        apply ThKeqI.refl
     _ =K= K I M N := by
         simp
-        apply app_congr
-        apply app_congr
-        apply app_congr
+        apply app_congr _ (LambdaTheory.refl N)
+        apply app_congr _ (LambdaTheory.refl M)
+        apply app_congr _ (LambdaTheory.refl I)
         apply ThEq_of_BetaEquiv (reduce_I K K_LC)
-        apply ThKeqI.refl
-        apply ThKeqI.refl
-        apply ThKeqI.refl
     _ =K= I N := by
       simp
-      apply app_congr
+      apply app_congr _ (LambdaTheory.refl N)
       apply ThKeqI_of_BetaEquiv
-      apply KMN_eq_M
-      · exact I_LC
-      · assumption
-      apply LambdaTheory.refl
+      exact KMN_eq_M I M I_LC hM
     _ =K= N := by
       simp
       apply ThKeqI_of_BetaEquiv
       apply reduce_I
       · assumption
-  exact instKeqI
 end KeqI
