@@ -1,10 +1,8 @@
 import src.LambdaTheory.Basic
 import src.LambdaTerms
 import src.BetaEquiv
+import src.LCresults
 import Cslib.Languages.LambdaCalculus.LocallyNameless.Untyped.FullBeta
-import Cslib.Languages.LambdaCalculus.LocallyNameless.Untyped.LcAt
-import Lean
-
 
 open Cslib
 open LambdaCalculus.LocallyNameless.Untyped
@@ -34,7 +32,7 @@ inductive ThKeqKstar : Term Var → Term Var → Prop
 instance instKeqKstar : LambdaTheory (@ThKeqKstar Var) :=
   ⟨ThKeqKstar.beta, ThKeqKstar.app, ThKeqKstar.refl, ThKeqKstar.trans, ThKeqKstar.sym⟩
 
-lemma ThKeqKstar_of_ThLambdaBeta {M N : Term Var} (h : ThLambdaBeta M N) : ThKeqKstar M N := by
+lemma ThKeqKstar_of_ThLambdaBeta {Var : Type u} {M N : Term Var} (h : ThLambdaBeta M N) : ThKeqKstar M N := by
   induction h with
   | beta _ _ h => apply ThKeqKstar.beta; assumption
   | refl P => apply ThKeqKstar.refl
@@ -48,7 +46,7 @@ lemma ThKeqKstar_of_ThLambdaBeta {M N : Term Var} (h : ThLambdaBeta M N) : ThKeq
     · assumption
     · assumption
 
-lemma ThKeqKstar_of_BetaEquiv {M N : Term Var} (h : M ≡β N) : ThKeqKstar M N :=
+lemma ThKeqKstar_of_BetaEquiv {Var : Type u} {M N : Term Var} (h : M ≡β N) : ThKeqKstar M N :=
   ThKeqKstar_of_ThLambdaBeta (ThLambdaBeta_of_BetaEquiv h)
 
 lemma Kstar_LC {Var : Type u} : (@Kstar Var).LC := by
@@ -115,76 +113,8 @@ lemma KstarMN_eq_N (M N : Term Var) (hM : M.LC) (hN : N.LC) : app (app Kstar M) 
     · assumption
     · assumption
 
-lemma helper₃ {Var : Type u} (M O : Term Var) (hM : M.LC) (hO : O.LC) : (M.app O).LC := by
-  grind
 
-@[simp, grind .]
-lemma absLC_of_LC {M : Term Var} (h : M.LC): (abs M).LC := by
-    apply LC.abs
-    grind
-    exact Finset.empty
-
-@[simp, grind =]
-lemma openRec_abs_eq_abs_of_LC (M N : Term Var) (hM : M.LC) : (M.abs ^ N = M.abs) := by
-  induction M with
-  | bvar n => cases hM
-  | fvar x => cases hM with | fvar =>  unfold open'; simp_rw [openRec_abs, openRec_fvar]
-  | app M O ih₁ ih₂ =>
-    cases hM with | app hM hO =>
-      specialize ih₁ hM
-      specialize ih₂ hO
-      unfold open' at *
-      rw [openRec_abs] at ih₁
-      rw [openRec_abs] at ih₂
-      rw [openRec_abs, openRec_app]
-      simp
-      constructor
-      · simp only [zero_add, abs.injEq] at ih₁
-        exact ih₁
-      · simp only [zero_add, abs.injEq] at ih₂
-        exact ih₂
-  | abs M ih => grind only [= open'.eq_1, =_ open_lc, absLC_of_LC]
-
-@[simp, grind =]
-lemma test (M N : Term Var) (hM : M.LC) : M ^ N = M := by
-  grind
-
--- -- (λx.M)
-lemma helper (M N : Term Var) (hM : M.LC) (hN : N.LC): app (abs M) N →βᶠ M:= by
-  induction M with
-  | abs O ih =>
-    apply Xi.base
-    have : (O.abs) = (O.abs) ^ N := by grind
-    nth_rw 2 [this]
-    apply Beta.beta
-    · grind
-    · assumption
-  | bvar n =>
-    apply Xi.base
-    have : bvar n = bvar n ^ N := by
-      grind
-    nth_rw 2 [this]
-    constructor
-    · grind
-    · assumption
-  | fvar x =>
-    apply Xi.base
-    have : fvar x = fvar x ^ N := by grind
-    nth_rw 2 [this]
-    constructor <;> try assumption
-    grind
-  | app M O ih₁ ih₂ =>
-    apply Xi.base
-    have : (M.app O) = (M.app O) ^ N := by grind
-    nth_rw 2 [this]
-    constructor <;> try assumption
-    grind
-
-  -- apply Relation.ReflTransGen.tail (b := M ^ N)
-  -- constructor
-
-
-lemma reduceK (M N : Term Var) (hM : M.LC) (hN : N.LC) : (app (app K M) N) ↠βᶠ M := by
+lemma reduceK {Var : Type u} [HasFresh Var] (M N : Term Var) (hM : M.LC) (hN : N.LC) : (app (app K M) N) ↠βᶠ M := by
   unfold K
   apply Relation.ReflTransGen.tail (b := app (abs M) N)
   · apply Relation.ReflTransGen.single
@@ -266,7 +196,7 @@ inductive ThKeqI : Term Var → Term Var → Prop
 instance instKeqI : LambdaTheory (@ThKeqI Var) :=
   ⟨ThKeqI.beta, ThKeqI.app, ThKeqI.refl, ThKeqI.trans, ThKeqI.sym⟩
 
-lemma ThKeqI_of_BetaEquiv {M N : Term Var} (h : M ≡β N) : ThKeqI M N :=
+lemma ThKeqI_of_BetaEquiv {Var : Type u} {M N : Term Var} (h : M ≡β N) : ThKeqI M N :=
   ThEq_of_ThLambdaBeta (ThLambdaBeta_of_BetaEquiv h)
 
 local notation:50 M " =K= " N => ThKeqI M N
@@ -278,7 +208,7 @@ lemma I_LC {Var : Type u} : (@I Var).LC := by
     grind
   · exact Finset.empty
 
-lemma reduce_I (M : Term Var) (hM : M.LC) : I M ≡β M := by
+lemma reduce_I {Var : Type u} (M : Term Var) (hM : M.LC) : I M ≡β M := by
   simp
   unfold I
   apply Relation.EqvGen.rel
