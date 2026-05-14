@@ -1,6 +1,6 @@
 import Cslib.Languages.LambdaCalculus.LocallyNameless.Untyped.FullBeta
 import Cslib.Languages.LambdaCalculus.LocallyNameless.Untyped.FullBetaConfluence
-
+import src.BetaEquiv
 
 namespace Cslib
 namespace LambdaCalculus.LocallyNameless.Untyped.Term
@@ -8,7 +8,7 @@ namespace LambdaCalculus.LocallyNameless.Untyped.Term
 open Term
 
 universe u
-variable {Var : Type u} [HasFresh Var] [DecidableEq Var]
+variable {Var : Type u} [instFresh: HasFresh Var] [instDecEq: DecidableEq Var]
 
 
 def multiBeta (M N : Term Var) : Prop := M ↠βᶠ N
@@ -27,12 +27,12 @@ theorem ChurchRosserMultiBeta : Relation.ChurchRosser (@multiBeta Var) := by
     case rel h =>
       induction h
       case refl a b => apply Relation.EqvGen.refl
-      case tail a b c d e f g h =>
+      case tail c d e f g h =>
         apply Relation.EqvGen.trans _ d
         · assumption
         · apply Relation.EqvGen.rel
           assumption
-    case trans a b c d e f g h i =>
+    case trans c d e f g h i =>
       apply Relation.EqvGen.trans _ d
       · assumption
       · assumption
@@ -52,6 +52,17 @@ theorem ChurchRosserMultiBeta' {Var : Type u} :
   intro M N hMN
   refine ⟨N, hMN, ?_⟩
   exact Relation.ReflTransGen.refl
+
+theorem ChurchRosser:
+    ∀ (M P₁ P₂ : Term Var),
+      multiBeta M P₁ →
+      multiBeta M P₂ →
+      ∃ Q : Term Var,
+        multiBeta P₁ Q ∧ multiBeta P₂ Q := by
+  intro M P₁ P₂ h₁ h₂
+  have confl := @confluence_beta Var instFresh instDecEq
+  specialize confl h₁ h₂
+  exact confl
 
 end LambdaCalculus.LocallyNameless.Untyped.Term
 end Cslib
