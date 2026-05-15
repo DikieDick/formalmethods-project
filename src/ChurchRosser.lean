@@ -36,7 +36,7 @@ theorem ChurchRosserMultiBeta : Relation.ChurchRosser (@multiBeta Var) := by
       apply Relation.EqvGen.trans _ d
       · assumption
       · assumption
-
+  -- Could also prove this by the fact that ReflTransGen of ReflTransGen r is just ReflTransGen r ?
   have h_cr := Relation.Confluent.toChurchRosser confluence_beta h_equiv_base
 
   obtain ⟨z, hxz, hyz⟩ := h_cr
@@ -53,16 +53,29 @@ theorem ChurchRosserMultiBeta' {Var : Type u} :
   refine ⟨N, hMN, ?_⟩
   exact Relation.ReflTransGen.refl
 
-theorem ChurchRosser:
-    ∀ (M P₁ P₂ : Term Var),
-      multiBeta M P₁ →
-      multiBeta M P₂ →
-      ∃ Q : Term Var,
-        multiBeta P₁ Q ∧ multiBeta P₂ Q := by
-  intro M P₁ P₂ h₁ h₂
+theorem ChurchRosser (M P₁ P₂ : Term Var) (h₁ : multiBeta M P₁) (h₂ : multiBeta M P₂) :
+  ∃ Q : Term Var, multiBeta P₁ Q ∧ multiBeta P₂ Q := by
   have confl := @confluence_beta Var instFresh instDecEq
   specialize confl h₁ h₂
   exact confl
+
+theorem common_reduct_of_BetaEquiv (M N : Term Var) (h : BetaEquiv M N) :
+  ∃ Q : Term Var, multiBeta M Q ∧ multiBeta N Q := by
+  induction h with
+  | refl M =>
+    use M
+    exact ⟨Relation.ReflTransGen.refl, Relation.ReflTransGen.refl⟩
+  | rel M N h =>
+    use N
+    exact ⟨Relation.ReflTransGen.single h, Relation.ReflTransGen.refl⟩
+  | symm M N h ih =>
+    rcases ih with ⟨Q, hMQ, hNQ⟩
+    exact ⟨Q, ⟨hNQ, hMQ⟩⟩
+  | trans M N O h1 h2 ih1 ih2 =>
+    rcases ih1 with ⟨Q, hMQ, hNQ⟩
+    rcases ih2 with ⟨P, hNP, hOP⟩
+    obtain ⟨R, hQR, hPR⟩ := ChurchRosser N Q P hNQ hNP
+    exact ⟨R, ⟨Relation.ReflTransGen.trans hMQ hQR, Relation.ReflTransGen.trans hOP hPR⟩⟩
 
 end LambdaCalculus.LocallyNameless.Untyped.Term
 end Cslib
