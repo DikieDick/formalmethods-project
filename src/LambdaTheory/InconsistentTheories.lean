@@ -21,7 +21,8 @@ section KeqKstar
 
 -- @[mkLambdaTheory]
 inductive ThKeqKstar : Term Var → Term Var → Prop
-| beta (M N) : FullBeta M N → ThKeqKstar M N
+| beta (M N) : Beta M N → ThKeqKstar M N
+| xi (M N : Term Var) (xs : Finset Var) : (∀ x ∉ xs, ThKeqKstar (M ^ fvar x) (N ^ fvar x)) → ThKeqKstar (abs M) (abs N)
 | app (M N P Q) : ThKeqKstar M N → ThKeqKstar P Q → ThKeqKstar (Term.app M P) (Term.app N Q)
 | refl (M) : ThKeqKstar M M
 | trans (M N P) : ThKeqKstar M N → ThKeqKstar N P → ThKeqKstar M P
@@ -29,24 +30,10 @@ inductive ThKeqKstar : Term Var → Term Var → Prop
 | new : ThKeqKstar K Kstar
 
 instance instKeqKstar : LambdaTheory (@ThKeqKstar Var) :=
-  ⟨ThKeqKstar.beta, ThKeqKstar.app, ThKeqKstar.refl, ThKeqKstar.trans, ThKeqKstar.sym⟩
-
-lemma ThKeqKstar_of_ThLambdaBeta {Var : Type u} {M N : Term Var} (h : ThLambdaBeta M N) : ThKeqKstar M N := by
-  induction h with
-  | beta _ _ h => apply ThKeqKstar.beta; assumption
-  | refl P => apply ThKeqKstar.refl
-  | sym M N h ih => apply ThKeqKstar.sym; assumption
-  | trans M N P _ _ hMN hNP =>
-    apply ThKeqKstar.trans M N P
-    · assumption
-    · assumption
-  | app M N P Q hMN hPQ _ _ =>
-    apply ThKeqKstar.app M N P Q
-    · assumption
-    · assumption
+  ⟨ThKeqKstar.beta, ThKeqKstar.xi, ThKeqKstar.app, ThKeqKstar.refl, ThKeqKstar.trans, ThKeqKstar.sym⟩
 
 lemma ThKeqKstar_of_BetaEquiv {Var : Type u} {M N : Term Var} (h : M ≡β N) : ThKeqKstar M N :=
-  ThKeqKstar_of_ThLambdaBeta (ThLambdaBeta_of_BetaEquiv h)
+    ThEq_of_ThLambdaBeta (ThLambdaBeta_of_BetaEquiv h)
 
 lemma Kstar_LC {Var : Type u} : (@Kstar Var).LC := by
   unfold Kstar
@@ -184,7 +171,8 @@ section KeqI
 
 -- @[mkLambdaTheory]
 inductive ThKeqI : Term Var → Term Var → Prop
-| beta (M N) : FullBeta M N → ThKeqI M N
+| beta (M N) : Beta M N → ThKeqI M N
+| xi (M N : Term Var) (xs : Finset Var) : (∀ x ∉ xs, ThKeqI (M ^ fvar x) (N ^ fvar x)) → ThKeqI (abs M) (abs N)
 | app (M N P Q) : ThKeqI M N → ThKeqI P Q → ThKeqI (Term.app M P) (Term.app N Q)
 | refl (M) : ThKeqI M M
 | trans (M N P) : ThKeqI M N → ThKeqI N P → ThKeqI M P
@@ -192,7 +180,7 @@ inductive ThKeqI : Term Var → Term Var → Prop
 | new : ThKeqI K I
 
 instance instKeqI : LambdaTheory (@ThKeqI Var) :=
-  ⟨ThKeqI.beta, ThKeqI.app, ThKeqI.refl, ThKeqI.trans, ThKeqI.sym⟩
+  ⟨ThKeqI.beta, ThKeqI.xi, ThKeqI.app, ThKeqI.refl, ThKeqI.trans, ThKeqI.sym⟩
 
 lemma ThKeqI_of_BetaEquiv {Var : Type u} {M N : Term Var} (h : M ≡β N) : ThKeqI M N :=
   ThEq_of_ThLambdaBeta (ThLambdaBeta_of_BetaEquiv h)

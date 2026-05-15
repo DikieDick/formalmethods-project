@@ -14,35 +14,75 @@ variable {Var : Type u}
 -- Herman Geuvers (https://www.cs.ru.nl/~herman/onderwijs/semantics2025/model_untyped_lambda.pdf)
 -- A λ-theory is closed under the following six rules
 class LambdaTheory (rel: Term Var → Term Var → Prop) where
-  beta (M N : Term Var) : FullBeta M N → rel M N
+  beta (M N : Term Var): Beta M N → rel M N
+  xi (M N : Term Var) (xs : Finset Var) : (∀ x ∉ xs, rel (M ^ fvar x) (N ^ fvar x)) → rel (abs M) (abs N)
   app (M N P Q : Term Var) : rel M N → rel P Q → rel (Term.app M P) (Term.app N Q)
   refl (M : Term Var) : rel M M
   trans (M N P : Term Var) : rel M N → rel N P → rel M P
   sym (M N : Term Var): rel M N → rel N M
 
 inductive ThLambdaBeta : Term Var → Term Var → Prop
-| beta (M N) : FullBeta M N → ThLambdaBeta M N
+| beta (M N) : Beta M N → ThLambdaBeta M N
+| xi (M N) (xs : Finset Var) : (∀ x ∉ xs, ThLambdaBeta (M ^ fvar x) (N ^ fvar x)) → ThLambdaBeta (abs M) (abs N)
 | app (M N P Q) : ThLambdaBeta M N → ThLambdaBeta P Q → ThLambdaBeta (app M P) (app N Q)
 | refl (M) : ThLambdaBeta M M
 | trans (M N P) : ThLambdaBeta M N → ThLambdaBeta N P → ThLambdaBeta M P
 | sym (M N): ThLambdaBeta M N → ThLambdaBeta N M
 
+-- def ThLambdaBeta' (M N : Term Var) := M ≡β N
+
+-- instance : @LambdaTheory Var (ThLambdaBeta') where
+--   beta M N h := by apply Relation.EqvGen.rel; apply Xi.base; assumption
+--   xi M N xs h := by
+--     apply Relation.EqvGen.rel
+--     apply Xi.abs xs
+--     intro x hx
+--     specialize h x hx
+
+--     sorry
+--   app M N P Q hMN hPQ := by
+--     apply Relation.EqvGen.trans _ (N.app P)
+--     · sorry
+--     · sorry
+--   refl := Relation.EqvGen.refl
+--   trans := Relation.EqvGen.trans
+--   sym := Relation.EqvGen.symm
+
+
 instance : @LambdaTheory Var (ThLambdaBeta) :=
-  ⟨ThLambdaBeta.beta, ThLambdaBeta.app, ThLambdaBeta.refl, ThLambdaBeta.trans, ThLambdaBeta.sym⟩
+  ⟨ThLambdaBeta.beta, ThLambdaBeta.xi, ThLambdaBeta.app, ThLambdaBeta.refl, ThLambdaBeta.trans, ThLambdaBeta.sym⟩
+
 
 lemma ThLambdaBeta_of_BetaEquiv {M N : Term Var} (h : M ≡β N) : ThLambdaBeta M N := by
   induction h with
-  | rel _ _ h => apply ThLambdaBeta.beta; assumption
-  | refl => apply ThLambdaBeta.refl
-  | symm M N h ih => apply ThLambdaBeta.sym; assumption
-  | trans M N P h₁ h₂ ih₁ ih₂ =>
-    apply ThLambdaBeta.trans M N P
-    · assumption
-    · assumption
+  | rel O P h =>
+    induction h with
+    | base h => apply ThLambdaBeta.beta; assumption
+    | appL =>
+      expose_names
+      apply ThLambdaBeta.app
+      · apply ThLambdaBeta.refl
+      · assumption
+    | appR =>
+      expose_names
+      apply ThLambdaBeta.app
+      · assumption
+      · apply ThLambdaBeta.refl
+    | abs =>
+      expose_names
+      apply ThLambdaBeta.xi _ _ xs
+      intro x hx
+      apply a_ih _ hx
+  | refl O => exact ThLambdaBeta.refl O
+  | symm O P h ih =>
+    apply ThLambdaBeta.sym; assumption
+  | trans O P Q h1 h2 ih1 ih2 =>
+    exact ThLambdaBeta.trans O P Q ih1 ih2
 
 lemma ThEq_of_ThLambdaBeta {M N : Term Var} {r : Term Var → Term Var → Prop} [LambdaTheory r] (h : ThLambdaBeta M N) : r M N := by
   induction h with
   | beta A B h => apply LambdaTheory.beta; assumption
+  | xi A B xs h ih => apply LambdaTheory.xi; assumption
   | refl P => apply LambdaTheory.refl
   | sym M N h ih => apply LambdaTheory.sym; assumption
   | trans M N P _ _ hMN hNP =>
@@ -53,20 +93,20 @@ lemma ThEq_of_ThLambdaBeta {M N : Term Var} {r : Term Var → Term Var → Prop}
 lemma ThEq_of_BetaEquiv {M N : Term Var} {r : Term Var → Term Var → Prop} [LambdaTheory r] (h : M ≡β N) : r M N :=
   ThEq_of_ThLambdaBeta (ThLambdaBeta_of_BetaEquiv h)
 
-lemma BetaEquiv_of_ThLambdaBeta {M N : Term Var} (h : ThLambdaBeta M N) : M ≡β N := by
-  induction h with
-  | beta M N h => apply Relation.EqvGen.rel; exact h
-  | refl M => apply Relation.EqvGen.refl
-  | sym M N h ih => apply Relation.EqvGen.symm; exact ih
-  | trans M N P h₁ h₂ ih₁ ih₂ =>
-    apply Relation.EqvGen.trans M N P
-    · assumption
-    · assumption
-  | app M N P Q h₁ h₂ ih₁ ih₂ =>
-    sorry
+-- lemma BetaEquiv_of_ThLambdaBeta {M N : Term Var} (h : ThLambdaBeta M N) : M ≡β N := by
+--   induction h with
+--   | beta M N h => apply Relation.EqvGen.rel; exact h
+--   | refl M => apply Relation.EqvGen.refl
+--   | sym M N h ih => apply Relation.EqvGen.symm; exact ih
+--   | trans M N P h₁ h₂ ih₁ ih₂ =>
+--     apply Relation.EqvGen.trans M N P
+--     · assumption
+--     · assumption
+--   | app M N P Q h₁ h₂ ih₁ ih₂ =>
+--     sorry
 
-lemma ThLambdaBeta_iff_BetaEquiv {M N : Term Var} : ThLambdaBeta M N ↔ M ≡β N :=
-  ⟨BetaEquiv_of_ThLambdaBeta, ThLambdaBeta_of_BetaEquiv⟩
+-- lemma ThLambdaBeta_iff_BetaEquiv {M N : Term Var} : ThLambdaBeta M N ↔ M ≡β N :=
+--   ⟨BetaEquiv_of_ThLambdaBeta, ThLambdaBeta_of_BetaEquiv⟩
 
 variable {r : Term Var → Term Var → Prop} [LambdaTheory r]
 
