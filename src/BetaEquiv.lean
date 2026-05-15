@@ -1,7 +1,5 @@
 import Cslib.Languages.LambdaCalculus.LocallyNameless.Untyped.FullBeta
 
-import src.ChurchRosser
-
 namespace Cslib
 namespace LambdaCalculus.LocallyNameless.Untyped
 
