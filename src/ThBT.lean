@@ -27,6 +27,7 @@ instance instThBT : LambdaTheory (Var:=Var) ThBT where
     intro h
     apply BT_eq_of_BetaEquiv
     apply Relation.EqvGen.rel
+    apply Xi.base
     assumption
   refl M := by
     apply BT_eq_of_BetaEquiv
@@ -38,6 +39,9 @@ instance instThBT : LambdaTheory (Var:=Var) ThBT where
     unfold ThBT
     intro h₁ h₂
     rw [h₁, h₂]
+  -- Requires a bit of work
+  xi M N xs h := by
+    unfold ThBT
+    sorry
   app M N P Q := by
-    -- Requires a bit of work
     sorry
