@@ -1,7 +1,7 @@
 import Cslib.Languages.LambdaCalculus.LocallyNameless.Untyped.Basic
 import Mathlib.Tactic
 import Coinductive
-import src.BetaEquiv
+import src.ChurchRosser
 
 open Cslib
 open LambdaCalculus.LocallyNameless.Untyped
@@ -10,7 +10,7 @@ open Lean.Order
 
 universe u
 
-variable {Var : Type u}
+variable {Var : Type u} [instFresh: HasFresh Var] [instDecEq: DecidableEq Var]
 
 inductive isHeadRedexApp : Term Var → Prop where
   | base N P₁ : isHeadRedexApp ((Term.abs N).app P₁)
@@ -65,8 +65,16 @@ def bfvar (Var : Type u) := { v : Term Var // (exists n, v = Term.bvar n) ∨ (e
 
 -- Reduction does not affect the number of leading abstractions, the head variable, or the number of arguments of the head-variable
 lemma reduction_preservation_fvar (n m : ℕ) (y z : bfvar Var) (Ps Qs : List (Term Var)) :
-    (nfoldAbs n (nfoldApp Ps y.val)).Beta (nfoldAbs m (nfoldApp Qs z.val)) →
+    (nfoldAbs n (nfoldApp Ps y.val)).multiBeta (nfoldAbs m (nfoldApp Qs z.val)) →
     n = m ∧ y = z ∧ Ps.BetaEquiv Qs := by
+  intros h
+  sorry
+
+lemma reduction_preservation_fvar' (n : ℕ) (y : bfvar Var) (Ps : List (Term Var)) (p : Term Var):
+    (nfoldAbs n (nfoldApp Ps y.val)).multiBeta p →
+    exists Qs,
+    p.BetaEquiv (nfoldAbs n (nfoldApp Qs y.val)) ∧ Ps.BetaEquiv Qs := by
+  intros h
   sorry
 
 -- Lemma 3.5
@@ -74,6 +82,12 @@ lemma hnfs_similar_fvar (n m : ℕ) (y z : bfvar Var) (Ps Qs : List (Term Var)) 
     M.BetaEquiv (nfoldAbs n (nfoldApp Ps y.val)) →
     M.BetaEquiv (nfoldAbs m (nfoldApp Qs z.val)) →
     n = m ∧ y = z ∧ Ps.BetaEquiv Qs := by
+  intros hn hm
+  apply Relation.EqvGen.symm _ _ at hn
+  have := Relation.EqvGen.trans _ _ _ hn hm
+  obtain ⟨p, h₁, h₂⟩ := (Term.common_reduct_of_BetaEquiv _ _ this)
+  have ⟨Qs₁, hp₁, hps₁⟩ := reduction_preservation_fvar' _ _ _ _ h₁
+  have ⟨Qs₂, hp₂, hps₂⟩ := reduction_preservation_fvar' _ _ _ _ h₂
   sorry
 
 inductive BöhmTreeF (Var : Type u) (T : Type u) : Type u where
@@ -120,10 +134,8 @@ coinductive BT (Var : Type u) : Term Var → BöhmTree Var → Prop where
       (forall (m : ULift (Fin num_children)), BT Var term_apps[m.down] (subtrees m)) →
       BT Var term (BöhmTree.hnf num_children term_num_abs term_base_var subtrees)
 
---             λ x .                        f      (           x                 x )
-def omega_f := Term.abs ((Term.fvar Unit.unit).app ((Term.bvar 0).app (Term.bvar 0)))
---                 λ f .                f      (ωf          ωf     )
-def Ycombinator := Term.abs ((Term.bvar 0).app (omega_f.app omega_f))
+def omega_f (f : Term Var) := Term.abs (f.app ((Term.bvar 0).app (Term.bvar 0)))
+def Ycombinator := @Term.abs Var ((Term.bvar 0).app ((omega_f $ Term.bvar 1).app (omega_f $ Term.bvar 1)))
 
 lemma inf_Ytree_approx (t : bfvar Var) (n n' na : ℕ) (f : ULift (Fin n') → (BöhmTree Var)) : (BöhmTree.hnf n' na t f).approx (n + 1) = BöhmTreeF.hnf n' na t (λ x ↦ (f x).approx n) := by
   simp [BöhmTree.hnf, BöhmTree.fold, CoInd.fold, PF.map, PF.pack]
@@ -143,6 +155,15 @@ theorem hnf_mono : monotone fun f ↦ BöhmTree.hnf 1 0 ⟨Term.fvar Unit.unit, 
 def inf_Ytree : BöhmTree Unit :=
   .hnf 1 0 ⟨Term.fvar Unit.unit, by simp⟩ (λ _ ↦ inf_Ytree)
 partial_fixpoint
+
+lemma omega_f_beta_f' : omega_f.app omega_f ≡β v.app (omega_f.app omega_f) := by
+  constructor
+  constructor
+  constructor
+  · apply Term.LC.abs {Unit.unit}
+    simp [Finset.mem_singleton]
+  · apply Term.LC.abs {Unit.unit}
+    simp [Finset.mem_singleton]
 
 lemma omega_f_beta_f : omega_f.app omega_f ≡β (Term.fvar Unit.unit).app (omega_f.app omega_f) := by
   constructor
@@ -171,3 +192,7 @@ lemma Ycombinator_tree : BT Unit (omega_f.app omega_f) (BöhmTree.hnf 1 0 ⟨Ter
       nth_rw 1 [inf_Ytree]
   · simp
     nth_rw 2 [inf_Ytree]
+
+lemma BT_congr_app (M P Q : Term Var) (h : BT Var P = BT Var Q) : BT Var (M.app P) = BT Var (M.app Q) := by
+
+  sorry
