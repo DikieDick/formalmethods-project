@@ -134,3 +134,6 @@ lemma betaEquiv_of_multiBeta (M N : Term Var) (hM : M.LC) (hN : N.LC) : (M ↠β
     apply Relation.EqvGen.trans M b c
     · exact hm
     · constructor; assumption
+
+lemma BetaEquiv_of_BetaEquiv_and_step {Var : Type u} (M N O : Term Var) (hMN : M.BetaEquiv N) (hNO : N →βᶠ O) : M.BetaEquiv O :=
+  Relation.EqvGen.trans M N O hMN (Relation.EqvGen.rel N O hNO)

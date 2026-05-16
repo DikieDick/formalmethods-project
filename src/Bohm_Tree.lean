@@ -128,6 +128,13 @@ def BöhmTree.hnf (n : ℕ) (na : ℕ) (t : bfvar Var) (f : ULift (Fin n) → (B
 def hasAsHnf (T : Term Var) (n : ℕ) (Ps : List (Term Var)) (y : bfvar Var) :=
   let T' := nfoldAbs n (nfoldApp Ps y.val) ; isHeadNormal T' ∧ T.BetaEquiv T'
 
+
+lemma HnfEq_of_BetaEquiv (M N : Term Var) (hMN : M.BetaEquiv N) n Ps y (h : hasAsHnf M n Ps y) : hasAsHnf N n Ps y := by
+  unfold hasAsHnf at *; dsimp at *
+  obtain ⟨hl, hr⟩ := h
+  refine ⟨hl, ?_⟩
+  apply Relation.EqvGen.trans N M _ hMN.symm hr
+
 -- Definition 3.7
 coinductive BT (Var : Type u) : Term Var → List Var → BöhmTree Var → Prop where
   | no_hnf (T : Term Var) (L : List Var) :
