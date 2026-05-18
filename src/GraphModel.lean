@@ -448,7 +448,18 @@ lemma G_old_eq_G (f : Set α → Set α):  G_old f = G f := by
   · rintro ⟨x, y, rfl, hx⟩
     use x, y
 
-lemma pair_iff (a b x y : α): pair x y = pair a b ↔ (x=a ∧ y=b) := by sorry -- SORRY
+lemma pair_iff (a b x y : α): pair x y = pair a b ↔ (x=a ∧ y=b) := by
+  constructor
+  · intro h
+    have h' : [x, y] = [a, b] := by
+      have := congrArg toList h
+      rw [<- Listing.eq_list [x, y]]
+      rwa [<- Listing.eq_list [a, b]]
+    injection h' with hx hy
+    injection hy with hy
+    exact ⟨hx, hy⟩
+  · intro ⟨hxa, hyb⟩
+    congr
 
 lemma fY_set (f : Set α → Set α) (Y : Set α)
 (h : continuous f):
