@@ -1,8 +1,12 @@
 import Mathlib.Data.SetLike.Basic
+import Mathlib.Data.Set.Basic
 import Cslib.Languages.LambdaCalculus.LocallyNameless.Untyped.FullBeta
 
 import src.Basic
 import src.CombinatoryAlgebra
+import src.BetaEquiv
+import src.ChurchRosser
+import src.LambdaTheory.Basic
 
 /-! We derive from a given section-retraction `List α → α` the
     combinatory algebra structure on `Set α`.
@@ -444,7 +448,7 @@ lemma G_old_eq_G (f : Set α → Set α):  G_old f = G f := by
   · rintro ⟨x, y, rfl, hx⟩
     use x, y
 
-lemma pair_iff (a b x y : α): pair x y = pair a b ↔ (x=a ∧ y=b) := by sorry
+lemma pair_iff (a b x y : α): pair x y = pair a b ↔ (x=a ∧ y=b) := by sorry -- SORRY
 
 lemma fY_set (f : Set α → Set α) (Y : Set α)
 (h : continuous f):
@@ -487,11 +491,12 @@ end GraphModel
 namespace Cslib
 namespace LambdaCalculus.LocallyNameless.Untyped.Term
 open Listing
+open LambdaTheory
 
 variable {α : Type} [Listing α]
-variable (i : α → α)
-variable (hi : Function.Injective i)
-variable {A : Set α}
+-- variable (i : α → α)
+-- variable (hi : Function.Injective i)
+-- variable {A : Set α}
 
 def apply (S : Set α) : Set α → Set α :=
   fun T b => ∃ β, toSet β ⊆ T ∧ pair b β ∈ S
@@ -502,17 +507,13 @@ def F (X : Set α) (Y : Set α) : Set α :=
 def G (f : Set α → Set α) : Set α := { x | ∃ b β, x = pair b β ∧ b ∈ f (toSet β) }
 
 universe u
-variable {Var : Type u} [DecidableEq Var]
+variable {Var : Type u} [HasFresh Var] [DecidableEq Var]
 
 @[simp]
 def subst_rho (ρ : ℕ → Set α) (n : ℕ) (d : Set α) : ℕ → Set α :=
   fun x => if x = n then d else ρ x
 
-lemma subst_rho_zero (ρ : ℕ → Set α) (n : ℕ) (d : Set α) :
-subst_rho ρ 0 d 0 = d
- := by
- simp
-
+@[simp]
 def DeBruijnShift (ρ : ℕ → Set α ): ℕ → Set α :=
   fun n => ρ (n + 1)
 
@@ -523,17 +524,51 @@ def Interp (ρ : ℕ → Set α) (σ: Var → Set α) : Term Var → Set α
 | app a b => (F (Interp ρ σ a) (Interp ρ σ b))
 | abs e   =>  G (fun d => (Interp (subst_rho (DeBruijnShift ρ) 0 d) σ e) )
 
-
 variable {ρ : ℕ → Set α}
 variable {σ : Var → Set α}
-variable {M : Term Var}
+variable {M N: Term Var}
 
 notation "〚"M"〛_{"ρ","σ"}" => Interp ρ σ M
 
 #check 〚 M 〛_{ρ,σ}
 
-@[reducible]
-instance UntypedLambdaCalculus.hasDot : HasDot (Term Var) where dot := app
+-- 2.7
+lemma DeBruijnSubst {α : Type} [Listing α]
+ {ρ : ℕ → Set α} {σ: Var → Set α} {P : Term Var}:
+〚M〛_{subst_rho (DeBruijnShift ρ) 0 〚P〛_{ρ,σ},σ} = 〚M ^ P〛_{ρ,σ} := by
+  induction M with
+  | bvar n  =>
+  simp
+  cases n
+  · grind
+  · expose_names
+    simp
+    sorry -- Big issue! SORRY
+  | fvar x  =>
+  have h: 〚(fvar x) ^ P〛_{ρ,σ} = 〚fvar x〛_{ρ,σ} := by grind
+  rw [h]
+  simp
+  | app a b =>
+  expose_names
+  simp
+  have h: 〚(app a b) ^ P〛_{ρ,σ} = 〚app (a ^ P) (b ^ P)〛_{ρ,σ} := by grind
+  rw [h, a_ih, a_ih_1]
+  simp
+  | abs e   =>
+  expose_names
+  simp
+  -- have h: 〚(abs e) ^ P〛_{ρ,σ} = 〚(abs (e ^ P)) 〛_{ρ,σ} := by sorry
+  -- rw [h]
+  -- simp
+  -- have h: 〚e ^ P〛_{subst_rho (DeBruijnShift ρ) 0 d,σ} = 〚e〛_{subst_rho (DeBruijnShift ρ) 0 〚P〛_{ρ,σ},σ}  := by grind
+  -- f_equal
+  -- rw [h, a_ih, a_ih_1]
+  -- simp
+  sorry -- SORRY
+
+
+-- @[reducible]
+-- instance UntypedLambdaCalculus.hasDot : HasDot (Term Var) where dot := app
 
 def K : Term Var := abs (abs $ bvar 1) -- λxy.x
 def S : Term Var := abs (abs (abs (app (app (bvar 2) (bvar 0)) (app (bvar 1) (bvar 2)))))-- λxyz.xz (yz) =  λ210.02 (12)
@@ -544,6 +579,98 @@ def ω : Term Var := abs (app (bvar 0) (bvar 0))
 def Ω : Term Var := app ω ω
 
 #check 〚 id 〛_{ρ,σ}
+
+def InterpRel {ρ : ℕ → Set α} {σ : Var → Set α}
+ (M N : Term Var) : Prop := Interp ρ σ M = Interp ρ σ N
+
+def continuous (f : Set α → Set α) :=
+  ∀ (S : Set α) (x : α), x ∈ f S ↔ ∃ y : α, toSet y ⊆ S ∧ (x ∈ f (toSet y))
+
+lemma F_G_eq_id (f : Set α → Set α) (Y : Set α) (h : continuous f ) :
+F (G f) Y = f Y := by sorry -- Proved in previous section
+
+
+lemma DeBruijnSubst_continuous:
+continuous fun d ↦ 〚M〛_{subst_rho (DeBruijnShift ρ) 0 d,σ} := by
+  induction M with
+  | bvar n  =>
+    simp
+    cases n
+    · simp
+      sorry
+      -- apply continuous_id, proved in previous section
+    · expose_names
+      simp
+      unfold continuous
+      intro S x
+      constructor
+      · intro h
+        use x
+        constructor
+        · sorry -- SORRY
+        · assumption
+      · grind
+      -- unfold DeBruijnShift
+      -- simp
+      -- intro h
+      -- use x
+      -- apply setInclusion
+  | fvar x  =>
+    unfold continuous
+    unfold DeBruijnShift
+    simp
+    intro S y h
+    sorry -- SORRY
+  | app a b =>
+    expose_names
+    simp
+    unfold F DeBruijnShift
+    sorry -- SORRY
+  | abs e   =>
+    expose_names
+    simp
+    unfold DeBruijnShift
+    simp
+    sorry -- SORRY
+
+lemma interp_ξ [fresh : HasFresh Var] {xs : Finset Var}
+(h: ∀ x ∉ xs, 〚M ^ fvar x〛_{ρ,σ} = 〚N ^ fvar x〛_{ρ,σ}) : 〚M.abs〛_{ρ,σ} = 〚N.abs〛_{ρ,σ} := by
+  have h1:= fresh.fresh_notMem xs
+  specialize h (fresh.fresh xs) h1
+  sorry -- SORRY
+
+instance [fresh : HasFresh Var] : LambdaTheory (fun M N => @InterpRel _ _ _ ρ σ M N) where
+  beta := by
+    intro M N h
+    unfold InterpRel
+    induction h
+    expose_names
+    simp
+    rw [F_G_eq_id _ _ (DeBruijnSubst_continuous)]
+    apply DeBruijnSubst
+  xi := by
+    intros M N xs
+    unfold InterpRel at *
+    apply interp_ξ
+  app:= by
+    intros M N P Q hMN hPQ
+    unfold InterpRel at *
+    unfold Interp
+    rw [hMN, hPQ]
+  refl := by
+    intros M
+    unfold InterpRel
+    rfl
+  trans := by
+    intros M N Q hMN hNQ
+    unfold InterpRel at *
+    grind
+  sym := by
+    intros M N h
+    unfold InterpRel at *
+    symm
+    assumption
+
 
 -- Example 3.1
 lemma interp_id :
@@ -569,6 +696,23 @@ lemma interp_id :
     · dsimp [Interp]
       assumption
 
+
+lemma interp_omega :
+〚 ω 〛_{ρ,σ} = {x | ∃ b, ∃ (β : α), x = (pair b β) ∧ b ∈ F (toSet β) (toSet β)}
+ := by
+  unfold ω
+  unfold Interp
+  unfold G
+  simp
+
+lemma interp_omega' :
+〚 ω 〛_{ρ,σ} = {x | ∃ b, ∃ (β : α), x = (pair b β) ∧ b ∈ {y | ∃ β', toSet β' ⊆ toSet β ∧ pair b β' ∈ toSet β}}
+ := by
+  unfold ω
+  unfold Interp
+  unfold G
+  simp
+  constructor
 
 lemma interp_id_id :
 〚 app id id 〛_{ρ,σ} = 〚 id 〛_{ρ,σ}
@@ -623,7 +767,7 @@ lemma interp_k :
       · simp [DeBruijnShift]
         sorry
 
-
+-- Complicated proof based on ranks, not achivable
 lemma interp_Omega :
 〚 Ω 〛_{ρ,σ} = ∅
  := by
@@ -636,26 +780,57 @@ lemma interp_Omega :
   sorry
 
 
+lemma beta_step_imp_interp_eq {A B : Term Var} (h: A ⭢βᶠ B) :〚A〛_{ρ,σ} = 〚B〛_{ρ,σ}
+:= by
+  induction h
+  · expose_names
+    cases M with
+    | app a b =>
+    obtain ⟨hM,hb⟩:= h
+    expose_names
+    simp only [Interp]      -- Unfold F and G
+    rw [F_G_eq_id _ _  DeBruijnSubst_continuous]
+    apply DeBruijnSubst
+    | _ => contradiction
+  · expose_names
+    simp
+    rw [a_ih]
+  · expose_names
+    simp
+    rw [a_ih]
+  · expose_names
+    apply interp_ξ a_ih
 
---  OLD STUFF!!!
--- lemma interp_abs_M (M : Term Var) :
--- 〚 abs M 〛_{ρ,σ} = {x | ∃ (β : α), ∃ b, x = (pair β, b)}
--- x | ∃ (β : α), ∃ b, x = (pair β b)
--- -- ∧ b ∈ 〚 abs M 〛_{ ρ } }
---  := by
---   sorry
+-- Berline Prop 61
+lemma multi_beta_imp_interp_eq (A B : Term Var):
+(A ↠βᶠ B) -> 〚 A 〛_{ρ,σ} = 〚 B 〛_{ρ,σ}
+ := by
+ intro h
+ induction h
+ · rfl
+ · expose_names
+   rw [a_ih]
+   apply (beta_step_imp_interp_eq h_1)
 
--- inductive Interp where
---   | empty : BinTree
---   | node  : BinTree → BinTree → BinTree
+lemma beta_eq_imp_interp_eq (A B : Term Var):
+(A ≡β B) -> 〚 A 〛_{ρ,σ} = 〚 B 〛_{ρ,σ}
+  := by
+  intro h
+  obtain ⟨Q,⟨hmA, hmB⟩⟩:= (common_reduct_of_BetaEquiv A B h)
+  rw [multi_beta_imp_interp_eq _ _ hmB]
+  exact multi_beta_imp_interp_eq _ _ hmA
 
--- variable {A : Set α}
 
--- inductive BinTree where
---   | empty : BinTree
---   | node  : BinTree → BinTree → BinTree
 
--- namespace BinTree
+-- def Context (t : Term Var ):  Term Var -> Term Var
+-- | t
+-- | fvar x  => fvar x
+-- | bvar n  => bvar n
+-- | app a b => app (Context t a) (Context t b)
+-- | abs e   => abs (Context t e)
+
+-- lemma Interp_eq_iff_context_solvable  (A B : Term Var):
+-- 〚 A 〛_{ρ,σ} = 〚 B 〛_{ρ,σ} ↔
 
 
 
@@ -663,7 +838,7 @@ def D_i (A : Set α) : ℕ → Set α
   | 0       => A
   | n + 1 =>  Set.union (D_i A n) { x | ∃ β b, x = pair β b ∧ toSet β ⊆ (D_i A n) ∧ b ∈ (D_i A n) }
 
-def D_A : Set α := Set.iUnion (D_i A)
+def D_A (A : Set α): Set α := Set.iUnion (D_i A)
 
 
 -- def rank : ℕ → Set α
@@ -674,7 +849,6 @@ def D_A : Set α := Set.iUnion (D_i A)
 -- | 0 : A
 -- | S : Expr
 -- | app : Expr → Expr → Expr
-
 
 
 
