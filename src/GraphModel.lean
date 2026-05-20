@@ -505,8 +505,8 @@ variable {α : Type} [Listing α]
 -- variable (hi : Function.Injective i)
 -- variable {A : Set α}
 
-def apply (S : Set α) : Set α → Set α :=
-  fun T b => ∃ β, toSet β ⊆ T ∧ pair b β ∈ S
+def apply (S : Set α) : Set α → Set α := GraphModel.apply S
+  -- fun T b => ∃ β, toSet β ⊆ T ∧ pair b β ∈ S
 
 def F (X : Set α) (Y : Set α) : Set α :=
   apply X Y
@@ -597,46 +597,28 @@ lemma F_G_eq_id (f : Set α → Set α) (Y : Set α) (h : continuous f ) :
 F (G f) Y = f Y := by sorry -- Proved in previous section
 
 
-lemma DeBruijnSubst_continuous:
-continuous fun d ↦ 〚M〛_{subst_rho (DeBruijnShift ρ) 0 d,σ} := by
-  induction M with
-  | bvar n  =>
+lemma DeBruijnSubst_continuous (P : Term Var) (i : ℕ) (ρ : ℕ → Set α) (σ : Var → Set α) :
+continuous fun d ↦ 〚P〛_{subst_rho (DeBruijnShift ρ) i d,σ} := by
+  induction P generalizing i ρ with
+  | bvar n =>
     simp
-    cases n
-    · simp
-      sorry
-      -- apply continuous_id, proved in previous section
-    · expose_names
-      simp
-      unfold continuous
-      intro S x
-      constructor
-      · intro h
-        use x
-        constructor
-        · sorry -- SORRY
-        · assumption
-      · grind
-      -- unfold DeBruijnShift
-      -- simp
-      -- intro h
-      -- use x
-      -- apply setInclusion
-  | fvar x  =>
-    unfold continuous
-    unfold DeBruijnShift
+    by_cases h: n = i <;> simp [h]
+    · apply GraphModel.continuous_id
+    · apply GraphModel.continuous_const
+  | fvar x => simp; apply GraphModel.continuous_const
+  | app N Q ihN ihQ =>
     simp
-    intro S y h
-    sorry -- SORRY
-  | app a b =>
-    expose_names
-    simp
-    unfold F DeBruijnShift
-    sorry -- SORRY
-  | abs e   =>
-    expose_names
-    simp
-    unfold DeBruijnShift
+    -- Note that this could also be proven by showing that this function rewrites to S ( apply ∘ A ) B
+    -- showing that S is continuous and then using the fact that composition is continuous
+    have (A : Set α → Set α) (B : Set α → Set α) (hA : continuous A) (hB : continuous B): continuous fun d ↦ apply (A d) (B d) := by
+      apply GraphModel.continuous₂_compose
+      · exact hA
+      · exact hB
+      exact GraphModel.apply.continuous₂
+    apply this
+    · apply ihN
+    · apply ihQ
+  | abs Q ih =>
     simp
     sorry -- SORRY
 
