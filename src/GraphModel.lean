@@ -38,17 +38,15 @@ def Listing.pair {α : Type} [Listing α] (x y : α) : α := fromList [x, y]
 def Listing.fst {α : Type} [Listing α] (x : α) : α := (toList x).head!
 
 /-- The second projection from a pair. -/
-def Listing.snd {α : Type} [Listing α] (x : α) : α := (toList x).get! (1: Fin (toList x).length)
+def Listing.snd {α : Type} [Listing α] (x : α) : α := (toList x)[1]!
 
 /-- Computation rule for the first projection from a pair. -/
 theorem Listing.eq_fst_pair {α : Type} [Listing α] (x y : α) : fst (pair x y) = x
-  := by simp [fst, snd, pair, eq_list]
+  := by simp [fst, pair, eq_list]
 
 /-- Computation rule for the second projection from a pair. -/
 theorem Listing.eq_snd_pair {α : Type} [Listing α] (x y : α) : snd (pair x y) = y
-  := by
-  simp
-  simp [snd, pair]
+  := by simp [snd, pair, eq_list]
 
 namespace GraphModel
 
@@ -451,13 +449,11 @@ lemma G_old_eq_G (f : Set α → Set α):  G_old f = G f := by
 lemma pair_iff (a b x y : α): pair x y = pair a b ↔ (x=a ∧ y=b) := by
   constructor
   · intro h
-    have h' : [x, y] = [a, b] := by
-      have := congrArg toList h
-      rw [<- Listing.eq_list [x, y]]
-      rwa [<- Listing.eq_list [a, b]]
-    injection h' with hx hy
-    injection hy with hy
-    exact ⟨hx, hy⟩
+    have fst := congrArg fst h
+    have snd := congrArg snd h
+    rw [Listing.eq_fst_pair, Listing.eq_fst_pair] at fst
+    rw [Listing.eq_snd_pair, Listing.eq_snd_pair] at snd
+    exact ⟨fst, snd⟩
   · intro ⟨hxa, hyb⟩
     congr
 
