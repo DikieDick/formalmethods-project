@@ -55,6 +55,7 @@ inductive List.BetaEquiv : List (Term Var) → List (Term Var) → Prop where
 
 def bfvar (Var : Type u) := { v : Term Var // (exists n, v = Term.bvar n) ∨ (exists v', v = Term.fvar v') }
 
+@[simp]
 def nfoldAbs := Nat.iterate (@Term.abs Var)
 
 @[simp]
@@ -160,12 +161,14 @@ def BöhmTree.unfold (t : (BöhmTree Var)) : (BöhmTreeF Var) (BöhmTree Var) :=
 def BöhmTree.no_hnf : (BöhmTree Var) := BöhmTree.fold .no_hnf
 def BöhmTree.hnf (n : ℕ) (na : ℕ) (t : bfvar Var) (f : ULift (Fin n) → (BöhmTree Var)) : (BöhmTree Var) := BöhmTree.fold (.hnf n na t f)
 
+@[simp]
 def böhm_tree_node {Var : Type u} [DecidableEq Var]: bfvar Var → List Var → bfvar Var
   | ⟨Term.bvar n, _⟩, L => ⟨Term.bvar n, by simp⟩
   | ⟨Term.fvar v, _⟩, L => match List.idxsOf v L with
     | idx :: _ => ⟨Term.bvar idx, by simp⟩
     | [] => ⟨Term.fvar v, by simp⟩
 
+@[simp]
 def abs_vars_free {Var : Type u} [DecidableEq Var] (a : List Var) (b : List (Term Var)) : Prop :=
   ∀ x ∈ a, ∀ y ∈ b, x ∉ y.fv
 
@@ -195,14 +198,13 @@ theorem hnf_mono (t : bfvar Var) : monotone fun f ↦ BöhmTree.hnf 1 0 t fun _ 
 def BT_fvar (n : Var) : BöhmTree Var := .hnf 0 0 ⟨Term.fvar n, by simp⟩ (fun n ↦ .no_hnf)
 lemma BT_fvar_correct [DecidableEq Var] (n : Var) : BT (Term.fvar n) [] (BT_fvar n) := by
   unfold BT_fvar
-  apply BT.hnf
-  apply BT.hnf_free_fvar Var _ [] n []
+  apply BT.hnf _ [] ⟨Term.fvar n, by simp⟩ []
   · simp [hasAsHnf]
     constructor
     · apply isHeadNormal.base
       apply isHeadNormalApp.base_free
     · apply Relation.EqvGen.refl
-  · simp only [List.length_nil, List.get_eq_getElem, IsEmpty.exists_iff, not_false_eq_true]
+  · simp
   . simp only [List.length_nil, List.append_nil, Fin.getElem_fin, IsEmpty.forall_iff]
 
 
@@ -210,12 +212,13 @@ lemma BT_fvar_correct [DecidableEq Var] (n : Var) : BT (Term.fvar n) [] (BT_fvar
 def BT_bvar (n : ℕ) : BöhmTree Var := .hnf 0 0 ⟨Term.bvar n, by simp⟩ (fun n ↦ .no_hnf)
 lemma BT_bvar_correct [DecidableEq Var] (n : ℕ) : BT (@Term.bvar Var n) [] (BT_bvar n) := by
   unfold BT_bvar
-  apply BT.hnf_bvar Var _ [] n []
+  apply BT.hnf _ [] ⟨Term.bvar n, by simp⟩ []
   · simp [hasAsHnf]
     constructor
     · apply isHeadNormal.base
       apply isHeadNormalApp.base_bound
     · apply Relation.EqvGen.refl
+  · simp
   · simp only [List.length_nil, List.append_nil, Fin.getElem_fin, nfoldOpen, IsEmpty.forall_iff]
 
 -- Var : Type u
@@ -260,7 +263,7 @@ lemma omega_f_beta_f (f : Var) : (omega_f_free f).app (omega_f_free f) ≡β (Te
 
 lemma Ycombinator_tree [DecidableEq Var] [fresh : HasFresh Var] : BT (@Ycombinator Var) [] Ytree := by
   have f := fresh.fresh ∅
-  apply BT.hnf_bvar Var Ycombinator [f] 0 [omega_f.app omega_f]
+  apply BT.hnf Ycombinator [f] ⟨Term.bvar 0, by simp⟩ [omega_f.app omega_f]
   · constructor
     · apply isHeadNormal.step
       apply isHeadNormal.base
@@ -268,13 +271,14 @@ lemma Ycombinator_tree [DecidableEq Var] [fresh : HasFresh Var] : BT (@Ycombinat
       apply isHeadNormalApp.base_bound
     · simp [nfoldAbs, nfoldApp]
       nth_rw 1 [Ycombinator]
+  · simp [omega_f]
   · intros m
     simp [nfoldOpen, Term.open', Term.openRec, omega_f]
     rw [←omega_f_free]
-    apply BT.coinduct Var (fun term L tree ↦ tree = inf_Ytree ∧ L = [f] ∧ term = (omega_f_free f).app (omega_f_free f))
+    apply BT.coinduct (fun term L tree ↦ tree = inf_Ytree ∧ L = [f] ∧ term = (omega_f_free f).app (omega_f_free f))
     · rintro term L tree ⟨prop_tree, prop_L, prop_term⟩
-      right ; right ; left
-      use [], f, [(omega_f_free f).app (omega_f_free f)], (λ _ ↦ inf_Ytree), ⟨0, by rw [prop_L] ; simp⟩
+      right
+      use [], ⟨Term.fvar f, by simp⟩, [(omega_f_free f).app (omega_f_free f)], (λ _ ↦ inf_Ytree)
       simp
       constructor
       · simp [hasAsHnf, nfoldAbs, nfoldApp]
@@ -287,7 +291,7 @@ lemma Ycombinator_tree [DecidableEq Var] [fresh : HasFresh Var] : BT (@Ycombinat
       · cases prop_L
         simp [prop_tree]
         constructor
-        · simp [nfoldOpen, Term.open', Term.openRec, omega_f_free]
+        · simp [Term.open', Term.openRec, omega_f_free]
         · nth_rw 1 [inf_Ytree]
     · simp
 
