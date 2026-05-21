@@ -160,25 +160,25 @@ def BöhmTree.unfold (t : (BöhmTree Var)) : (BöhmTreeF Var) (BöhmTree Var) :=
 def BöhmTree.no_hnf : (BöhmTree Var) := BöhmTree.fold .no_hnf
 def BöhmTree.hnf (n : ℕ) (na : ℕ) (t : bfvar Var) (f : ULift (Fin n) → (BöhmTree Var)) : (BöhmTree Var) := BöhmTree.fold (.hnf n na t f)
 
+def böhm_tree_node {Var : Type u} [DecidableEq Var]: bfvar Var → List Var → bfvar Var
+  | ⟨Term.bvar n, _⟩, L => ⟨Term.bvar n, by simp⟩
+  | ⟨Term.fvar v, _⟩, L => match List.idxsOf v L with
+    | idx :: _ => ⟨Term.bvar idx, by simp⟩
+    | [] => ⟨Term.fvar v, by simp⟩
+
+def abs_vars_free {Var : Type u} [DecidableEq Var] (a : List Var) (b : List (Term Var)) : Prop :=
+  ∀ x ∈ a, ∀ y ∈ b, x ∉ y.fv
+
 -- Definition 3.7
-coinductive BT (Var : Type u) : Term Var → List Var → BöhmTree Var → Prop where
+coinductive BT {Var : Type u} [DecidableEq Var] : Term Var → List Var → BöhmTree Var → Prop where
   | no_hnf (T : Term Var) (L : List Var) :
       ¬(exists n Ps y, hasAsHnf T n Ps y) →
-      BT Var T L BöhmTree.no_hnf
-  | hnf_bvar (term : Term Var) (abs_vars : List Var) (term_base_var : ℕ) (term_apps : List (Term Var)) (subtrees : ULift (Fin term_apps.length) → BöhmTree Var) (L : List Var) :
-      hasAsHnf term abs_vars.length term_apps ⟨Term.bvar term_base_var, by simp⟩ →
-      (forall (m : ULift (Fin term_apps.length)), BT Var (nfoldOpen (abs_vars ++ L) term_apps[m.down]) (abs_vars ++ L) (subtrees m)) →
-      BT Var term L (BöhmTree.hnf term_apps.length abs_vars.length ⟨Term.bvar term_base_var, by simp⟩ subtrees)
-  | hnf_bound_fvar (term : Term Var) (abs_vars : List Var) (term_base_var : Var) (term_apps : List (Term Var)) (subtrees : ULift (Fin term_apps.length) → BöhmTree Var) (L : List Var) (L_index : Fin L.length) :
-      hasAsHnf term abs_vars.length term_apps ⟨Term.fvar term_base_var, by simp⟩ →
-      L.get L_index = term_base_var →
-      (forall (m : ULift (Fin term_apps.length)), BT Var (nfoldOpen (abs_vars ++ L) term_apps[m.down]) (abs_vars ++ L) (subtrees m)) →
-      BT Var term L (BöhmTree.hnf term_apps.length abs_vars.length ⟨Term.bvar L_index, by simp⟩ subtrees)
-  | hnf_free_fvar (term : Term Var) (abs_vars : List Var) (term_base_var : Var) (term_apps : List (Term Var)) (subtrees : ULift (Fin term_apps.length) → BöhmTree Var) (L : List Var) :
-      hasAsHnf term abs_vars.length term_apps ⟨Term.fvar term_base_var, by simp⟩ →
-      (¬∃ L_index, L.get L_index = term_base_var) →
-      (forall (m : ULift (Fin term_apps.length)), BT Var (nfoldOpen (abs_vars ++ L) term_apps[m.down]) (abs_vars ++ L) (subtrees m)) →
-      BT Var term L (BöhmTree.hnf term_apps.length abs_vars.length ⟨Term.fvar term_base_var, by simp⟩ subtrees)
+      BT T L BöhmTree.no_hnf
+  | hnf (term : Term Var) (abs_vars : List Var) (term_base_var : bfvar Var) (term_apps : List (Term Var)) (subtrees : ULift (Fin term_apps.length) → BöhmTree Var) (L : List Var) :
+      hasAsHnf term abs_vars.length term_apps term_base_var →
+      abs_vars_free abs_vars (term_apps ++ L.map Term.fvar) →
+      (forall (m : ULift (Fin term_apps.length)), BT (nfoldOpen (abs_vars ++ L) term_apps[m.down]) (abs_vars ++ L) (subtrees m)) →
+      BT term L (BöhmTree.hnf term_apps.length abs_vars.length (böhm_tree_node term_base_var L) subtrees)
 
 @[partial_fixpoint_monotone]
 theorem hnf_mono (t : bfvar Var) : monotone fun f ↦ BöhmTree.hnf 1 0 t fun _ ↦ f := by
@@ -193,8 +193,9 @@ theorem hnf_mono (t : bfvar Var) : monotone fun f ↦ BöhmTree.hnf 1 0 t fun _ 
 
 -- BT of free variable together with correctness proof
 def BT_fvar (n : Var) : BöhmTree Var := .hnf 0 0 ⟨Term.fvar n, by simp⟩ (fun n ↦ .no_hnf)
-lemma BT_fvar_correct (n : Var) : BT Var (Term.fvar n) [] (BT_fvar n) := by
+lemma BT_fvar_correct [DecidableEq Var] (n : Var) : BT (Term.fvar n) [] (BT_fvar n) := by
   unfold BT_fvar
+  apply BT.hnf
   apply BT.hnf_free_fvar Var _ [] n []
   · simp [hasAsHnf]
     constructor
@@ -207,7 +208,7 @@ lemma BT_fvar_correct (n : Var) : BT Var (Term.fvar n) [] (BT_fvar n) := by
 
 -- BT of bound variable together with correctness proof
 def BT_bvar (n : ℕ) : BöhmTree Var := .hnf 0 0 ⟨Term.bvar n, by simp⟩ (fun n ↦ .no_hnf)
-lemma BT_bvar_correct (n : ℕ) : BT Var (Term.bvar n) [] (BT_bvar n) := by
+lemma BT_bvar_correct [DecidableEq Var] (n : ℕ) : BT (@Term.bvar Var n) [] (BT_bvar n) := by
   unfold BT_bvar
   apply BT.hnf_bvar Var _ [] n []
   · simp [hasAsHnf]
@@ -224,7 +225,7 @@ lemma BT_bvar_correct (n : ℕ) : BT Var (Term.bvar n) [] (BT_bvar n) := by
 -- ⊢ ∃ L T, BT Var (P.app Q) L T
 -- def BT_app (P Q : Term Var) : BöhmTree Var := sorry
 
-lemma exists_BT_for_term (M : Term Var) : ∃ L T, BT Var M L T := by
+lemma exists_BT_for_term [DecidableEq Var] (M : Term Var) : ∃ L T, BT M L T := by
   induction M with
   | bvar n =>
     exact ⟨[], BT_bvar n, BT_bvar_correct _⟩
@@ -257,7 +258,7 @@ lemma omega_f_beta_f (f : Var) : (omega_f_free f).app (omega_f_free f) ≡β (Te
     intro x elem
     apply Term.LC.app <;> simp [Term.openRec] <;> constructor <;> constructor
 
-lemma Ycombinator_tree [fresh : HasFresh Var] : BT Var Ycombinator [] Ytree := by
+lemma Ycombinator_tree [DecidableEq Var] [fresh : HasFresh Var] : BT (@Ycombinator Var) [] Ytree := by
   have f := fresh.fresh ∅
   apply BT.hnf_bvar Var Ycombinator [f] 0 [omega_f.app omega_f]
   · constructor
@@ -290,6 +291,6 @@ lemma Ycombinator_tree [fresh : HasFresh Var] : BT Var Ycombinator [] Ytree := b
         · nth_rw 1 [inf_Ytree]
     · simp
 
-lemma BT_congr_app (M P Q : Term Var) (h : BT Var P = BT Var Q) : BT Var (M.app P) = BT Var (M.app Q) := by
+lemma BT_congr_app [DecidableEq Var] (M P Q : Term Var) (h : BT P = BT Q) : BT (M.app P) = BT (M.app Q) := by
 
   sorry
