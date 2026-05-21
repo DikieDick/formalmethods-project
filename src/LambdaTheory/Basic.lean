@@ -6,7 +6,7 @@ open LambdaCalculus.LocallyNameless.Untyped
 
 open Term
 
-namespace LambdaTheory
+namespace LT
 
 universe u
 variable {Var : Type u}
@@ -174,4 +174,4 @@ def inconsistent (r : Term Var → Term Var → Prop) [LambdaTheory r] : Prop :=
 
 -- end
 
-end LambdaTheory
+end LT

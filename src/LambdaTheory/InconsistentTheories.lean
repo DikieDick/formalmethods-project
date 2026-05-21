@@ -9,7 +9,7 @@ open LambdaCalculus.LocallyNameless.Untyped
 open Term
 
 open LambdaTerms
-open LambdaTheory
+open LT
 
 universe u
 variable {Var : Type u} [HasFresh Var] [DecidableEq Var]

@@ -10,8 +10,7 @@ open Term
 universe u
 variable {Var : Type u}
 
-
-open LambdaTheory
+open LT
 
 section LambdaBetaEta
 
@@ -26,7 +25,7 @@ inductive ThLambdaBetaEta : Term Var → Term Var → Prop
 
 #check FullEta
 
-instance : @LambdaTheory Var (ThLambdaBetaEta) :=
-  ⟨ThLambdaBetaEta.beta, ThLambdaBetaEta.app, ThLambdaBetaEta.refl, ThLambdaBetaEta.trans, ThLambdaBetaEta.sym⟩
+-- instance : @LambdaTheory Var (ThLambdaBetaEta) :=
+--   ⟨ThLambdaBetaEta.beta, ThLambdaBetaEta.app, ThLambdaBetaEta.refl, ThLambdaBetaEta.trans, ThLambdaBetaEta.sym⟩
 
 end LambdaBetaEta
