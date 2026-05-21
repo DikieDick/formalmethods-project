@@ -78,7 +78,9 @@ lemma BetaEquiv_of_BetaEquiv_abs (P Q : Term Var) (lc_P : P.LC) (lc_Q : Q.LC) (h
       sorry
     case a.abs xs a =>
       sorry
-  sorry
+  case symm h => sorry
+  case refl => sorry
+  case trans R h₁ h₂ => sorry
 
 lemma destruct_BetaEquiv_nfoldAbs (n : ℕ) (P Q : Term Var) (lc_P : P.LC) (lc_Q : Q.LC) (h : nfoldAbs n P ≡β nfoldAbs n Q) : P ≡β Q := by
   induction' n with n ih generalizing P Q
@@ -87,7 +89,7 @@ lemma destruct_BetaEquiv_nfoldAbs (n : ℕ) (P Q : Term Var) (lc_P : P.LC) (lc_Q
     specialize ih _ _ _ _ h
     · sorry
     · sorry
-    · exact BetaEquiv_of_BetaEquiv_abs _ _ ih
+    · sorry
 
 -- Reduction does not affect the number of leading abstractions, the head variable, or the number of arguments of the head-variable
 lemma reduction_preservation_fvar (n m : ℕ) (y z : bfvar Var) (Ps Qs : List (Term Var)) :
@@ -127,7 +129,6 @@ lemma hnfs_similar_fvar [HasFresh Var] [DecidableEq Var] (n m : ℕ) (y z : bfva
   cases hq₁
   have ⟨a, b, h⟩ : exists a b : Term Var, nfoldAbs n a = nfoldAbs m b := sorry
 
-  cases hq₂
   sorry
 
 inductive BöhmTreeF (Var : Type u) (T : Type u) : Type u where
@@ -207,7 +208,6 @@ lemma BT_fvar_correct [DecidableEq Var] (n : Var) : BT (Term.fvar n) [] (BT_fvar
   · simp
   . simp only [List.length_nil, List.append_nil, Fin.getElem_fin, IsEmpty.forall_iff]
 
-
 -- BT of bound variable together with correctness proof
 def BT_bvar (n : ℕ) : BöhmTree Var := .hnf 0 0 ⟨Term.bvar n, by simp⟩ (fun n ↦ .no_hnf)
 lemma BT_bvar_correct [DecidableEq Var] (n : ℕ) : BT (@Term.bvar Var n) [] (BT_bvar n) := by
@@ -221,13 +221,6 @@ lemma BT_bvar_correct [DecidableEq Var] (n : ℕ) : BT (@Term.bvar Var n) [] (BT
   · simp
   · simp only [List.length_nil, List.append_nil, Fin.getElem_fin, nfoldOpen, IsEmpty.forall_iff]
 
--- Var : Type u
--- P Q : Term Var
--- ihP : ∃ L T, BT Var P L T
--- ihQ : ∃ L T, BT Var Q L T
--- ⊢ ∃ L T, BT Var (P.app Q) L T
--- def BT_app (P Q : Term Var) : BöhmTree Var := sorry
-
 lemma exists_BT_for_term [DecidableEq Var] (M : Term Var) : ∃ L T, BT M L T := by
   induction M with
   | bvar n =>
@@ -238,7 +231,6 @@ lemma exists_BT_for_term [DecidableEq Var] (M : Term Var) : ∃ L T, BT M L T :=
     obtain ⟨LQ, TQ⟩ := ihQ
     sorry
   | abs => sorry
-
 
 def inf_Ytree : BöhmTree Var :=
   .hnf 1 0 ⟨Term.bvar 0, by simp⟩ (λ _ ↦ inf_Ytree)
@@ -294,7 +286,3 @@ lemma Ycombinator_tree [DecidableEq Var] [fresh : HasFresh Var] : BT (@Ycombinat
         · simp [Term.open', Term.openRec, omega_f_free]
         · nth_rw 1 [inf_Ytree]
     · simp
-
-lemma BT_congr_app [DecidableEq Var] (M P Q : Term Var) (h : BT P = BT Q) : BT (M.app P) = BT (M.app Q) := by
-
-  sorry
