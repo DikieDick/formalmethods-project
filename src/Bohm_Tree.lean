@@ -49,9 +49,13 @@ lemma normal_or_redex (T : Term Var) : isHeadRedex T ∨ isHeadNormal T := by
       · cases ih1 ; left ; apply isHeadRedex.base ; apply isHeadRedexApp.step ; assumption
       · cases ih1 ; right ; apply isHeadNormal.base ; apply isHeadNormalApp.step ; assumption
 
-def nfoldAbs : ℕ → Term Var → Term Var
-| 0, T => T
-| n + 1, T => nfoldAbs n T.abs
+inductive List.BetaEquiv : List (Term Var) → List (Term Var) → Prop where
+  | base : [].BetaEquiv []
+  | step as bs T₁ T₂ : T₁.BetaEquiv T₂ → as.BetaEquiv bs → (T₁ :: as).BetaEquiv (T₂ :: bs)
+
+def bfvar (Var : Type u) := { v : Term Var // (exists n, v = Term.bvar n) ∨ (exists v', v = Term.fvar v') }
+
+def nfoldAbs := Nat.iterate (@Term.abs Var)
 
 def nfoldOpen : List Var → Term Var → Term Var
 | [], T => T
@@ -61,11 +65,26 @@ def nfoldApp : List (Term Var) → Term Var → Term Var
 | [], T => T
 | a :: as, T => nfoldApp as (T.app a)
 
-inductive List.BetaEquiv : List (Term Var) → List (Term Var) → Prop where
-  | base : [].BetaEquiv []
-  | step as bs T₁ T₂ : T₁.BetaEquiv T₂ → as.BetaEquiv bs → (T₁ :: as).BetaEquiv (T₂ :: bs)
+lemma BetaEquiv_of_BetaEquiv_abs (P Q : Term Var) (lc_P : P.LC) (lc_Q : Q.LC) (h : P.abs ≡β Q.abs) : P ≡β Q := by
+  cases h
+  case rel h =>
+    apply Relation.EqvGen.rel
+    cases h
+    case a.base h =>
+      constructor
+      sorry
+    case a.abs xs a =>
+      sorry
+  sorry
 
-def bfvar (Var : Type u) := { v : Term Var // (exists n, v = Term.bvar n) ∨ (exists v', v = Term.fvar v') }
+lemma destruct_BetaEquiv_nfoldAbs (n : ℕ) (P Q : Term Var) (lc_P : P.LC) (lc_Q : Q.LC) (h : nfoldAbs n P ≡β nfoldAbs n Q) : P ≡β Q := by
+  induction' n with n ih generalizing P Q
+  · exact h
+  · simp [nfoldAbs] at h
+    specialize ih _ _ _ _ h
+    · sorry
+    · sorry
+    · exact BetaEquiv_of_BetaEquiv_abs _ _ ih
 
 -- Reduction does not affect the number of leading abstractions, the head variable, or the number of arguments of the head-variable
 lemma reduction_preservation_fvar (n m : ℕ) (y z : bfvar Var) (Ps Qs : List (Term Var)) :
@@ -77,9 +96,19 @@ lemma reduction_preservation_fvar (n m : ℕ) (y z : bfvar Var) (Ps Qs : List (T
 lemma reduction_preservation_fvar' (n : ℕ) (y : bfvar Var) (Ps : List (Term Var)) (p : Term Var):
     (nfoldAbs n (nfoldApp Ps y.val)).multiBeta p →
     exists Qs,
-    p.BetaEquiv (nfoldAbs n (nfoldApp Qs y.val)) ∧ Ps.BetaEquiv Qs := by
+    p = (nfoldAbs n (nfoldApp Qs y.val)) ∧ Ps.BetaEquiv Qs := by
   intros h
   sorry
+
+def hasAsHnf (T : Term Var) (n : ℕ) (Ps : List (Term Var)) (y : bfvar Var) :=
+  let T' := nfoldAbs n (nfoldApp Ps y.val) ; isHeadNormal T' ∧ T.BetaEquiv T'
+
+def hasHnf (T : Term Var) := exists n L y, hasAsHnf T n L y
+
+lemma HnfEq_of_BetaEquiv (M N : Term Var) (hMN : M.BetaEquiv N) n Ps y (h : hasAsHnf M n Ps y) : hasAsHnf N n Ps y := by
+  obtain ⟨hl, hr⟩ := h
+  refine ⟨hl, ?_⟩
+  apply Relation.EqvGen.trans N M _ hMN.symm hr
 
 -- Lemma 3.5
 lemma hnfs_similar_fvar [HasFresh Var] [DecidableEq Var] (n m : ℕ) (y z : bfvar Var) (Ps Qs : List (Term Var)) (M : Term Var) :
@@ -88,10 +117,14 @@ lemma hnfs_similar_fvar [HasFresh Var] [DecidableEq Var] (n m : ℕ) (y z : bfva
     n = m ∧ y = z ∧ Ps.BetaEquiv Qs := by
   intros hn hm
   apply Relation.EqvGen.symm _ _ at hn
-  have := Relation.EqvGen.trans _ _ _ hn hm
-  obtain ⟨p, h₁, h₂⟩ := (Term.common_reduct_of_BetaEquiv _ _ this)
-  have ⟨Qs₁, hp₁, hps₁⟩ := reduction_preservation_fvar' _ _ _ _ h₁
-  have ⟨Qs₂, hp₂, hps₂⟩ := reduction_preservation_fvar' _ _ _ _ h₂
+  have : (nfoldAbs n (nfoldApp Ps y.val)) ≡β (nfoldAbs m (nfoldApp Qs z.val)) := Relation.EqvGen.trans _ _ _ hn hm
+  have ⟨Q, h₁, h₂⟩ := Term.common_reduct_of_BetaEquiv _ _ this
+  have ⟨Qs, hq₁, hqs₁⟩ := reduction_preservation_fvar' _ _ _ _ h₁
+  have ⟨Qs, hq₂, hqs₂⟩ := reduction_preservation_fvar' _ _ _ _ h₂
+  cases hq₁
+  have ⟨a, b, h⟩ : exists a b : Term Var, nfoldAbs n a = nfoldAbs m b := sorry
+
+  cases hq₂
   sorry
 
 inductive BöhmTreeF (Var : Type u) (T : Type u) : Type u where
@@ -124,16 +157,6 @@ def BöhmTree.fold (t : (BöhmTreeF Var) (BöhmTree Var)) : (BöhmTree Var) := C
 def BöhmTree.unfold (t : (BöhmTree Var)) : (BöhmTreeF Var) (BöhmTree Var) := CoInd.unfold _ t
 def BöhmTree.no_hnf : (BöhmTree Var) := BöhmTree.fold .no_hnf
 def BöhmTree.hnf (n : ℕ) (na : ℕ) (t : bfvar Var) (f : ULift (Fin n) → (BöhmTree Var)) : (BöhmTree Var) := BöhmTree.fold (.hnf n na t f)
-
-def hasAsHnf (T : Term Var) (n : ℕ) (Ps : List (Term Var)) (y : bfvar Var) :=
-  let T' := nfoldAbs n (nfoldApp Ps y.val) ; isHeadNormal T' ∧ T.BetaEquiv T'
-
-
-lemma HnfEq_of_BetaEquiv (M N : Term Var) (hMN : M.BetaEquiv N) n Ps y (h : hasAsHnf M n Ps y) : hasAsHnf N n Ps y := by
-  unfold hasAsHnf at *; dsimp at *
-  obtain ⟨hl, hr⟩ := h
-  refine ⟨hl, ?_⟩
-  apply Relation.EqvGen.trans N M _ hMN.symm hr
 
 -- Definition 3.7
 coinductive BT (Var : Type u) : Term Var → List Var → BöhmTree Var → Prop where
