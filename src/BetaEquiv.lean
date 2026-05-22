@@ -8,43 +8,6 @@ open Term
 universe u
 variable {Var : Type u} [HasFresh Var] [DecidableEq Var]
 
-
-
--- /-- A single β-reduction step. -/
--- -- @[scoped grind]
--- inductive Beta₂ : Term Var → Term Var → Prop
--- /-- Reduce an application to a lambda term. -/
--- | beta {M N : Term Var}: Beta₂ (app (abs M) N) (M ^ N)
-
--- /-- Full β-reduction. -/
--- @[reduction_sys "β₂"]
--- abbrev FullBeta₂ : Term Var → Term Var → Prop := Xi Beta₂
-
-
--- def Term.BetaEquiv₂ : Term Var → Term Var → Prop :=
---   Relation.EqvGen FullBeta₂
-
--- instance instEquivBetaEquiv : Equivalence (@BetaEquiv₂ Var) :=
---   Relation.EqvGen.is_equivalence FullBeta₂
-
--- lemma Beta_of_Beta₂ (M N X : Term Var) (hM : M.abs.LC) (hN : N.LC) (h : FullBeta₂ (M.abs.app N) X) : FullBeta (M.abs.app N) X := by
---   -- apply Xi.base
---   -- exact Xi.base (Beta.beta hM hN) M N
---   -- constructor
---   induction M
-
-  -- (abs M).app N ->β M
-
-  -- cases h with
-  -- | base h =>
-  --     constructor
-  --     cases h
-  --     constructor <;> assumption
-  -- | appL
-  -- · constructor
-  -- constructor <;> assumption
-
-
 notation3 t:39 " →βᶠ " t':39 => t ⭢βᶠ t'
 
 def Term.BetaEquiv : Term Var → Term Var → Prop :=

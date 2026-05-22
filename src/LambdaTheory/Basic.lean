@@ -93,6 +93,23 @@ lemma ThEq_of_ThLambdaBeta {M N : Term Var} {r : Term Var → Term Var → Prop}
 lemma ThEq_of_BetaEquiv {M N : Term Var} {r : Term Var → Term Var → Prop} [LambdaTheory r] (h : M ≡β N) : r M N :=
   ThEq_of_ThLambdaBeta (ThLambdaBeta_of_BetaEquiv h)
 
+-- M = N in λβ if and only if M =β N :
+lemma ThLambdaBeta_iff_BetaEquiv (M N : Term Var) : ThLambdaBeta M N ↔ M.BetaEquiv N := by
+  constructor <;> intro h
+  · induction h with
+    | beta O P h =>
+      apply Relation.EqvGen.rel
+      apply Xi.base
+      apply h
+    | refl O => apply Relation.EqvGen.refl
+    | sym O P _ ih => exact ih.symm
+    | trans O P Q hOP hPQ ih₁ ih₂ => exact Relation.EqvGen.trans O P Q ih₁ ih₂
+    | app O P Q R hOP hQR ih₁ ih₂ =>
+      sorry
+    | xi O P xs h ih =>
+      sorry
+  · exact ThEq_of_BetaEquiv h
+
 -- lemma BetaEquiv_of_ThLambdaBeta {M N : Term Var} (h : ThLambdaBeta M N) : M ≡β N := by
 --   induction h with
 --   | beta M N h => apply Relation.EqvGen.rel; exact h

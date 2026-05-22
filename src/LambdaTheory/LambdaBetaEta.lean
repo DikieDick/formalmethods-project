@@ -15,9 +15,9 @@ open LT
 section LambdaBetaEta
 
 inductive ThLambdaBetaEta : Term Var → Term Var → Prop
-| beta (M N) : FullBeta M N → ThLambdaBetaEta M N
+| beta (M N) : Beta M N → ThLambdaBetaEta M N
 | app (M N P Q) : ThLambdaBetaEta M N → ThLambdaBetaEta P Q → ThLambdaBetaEta (app M P) (app N Q)
--- | xi (M N) : LambdaRelated M N → Term.abs
+| xi (M N) (xs : Finset Var) : (∀ x ∉ xs, ThLambdaBetaEta (M ^ fvar x) (N ^ fvar x)) → ThLambdaBetaEta (abs M) (abs N)
 | refl (M) : ThLambdaBetaEta M M
 | trans (M N P) : ThLambdaBetaEta M N → ThLambdaBetaEta N P → ThLambdaBetaEta M P
 | sym (M N): ThLambdaBetaEta M N → ThLambdaBetaEta N M
@@ -25,7 +25,7 @@ inductive ThLambdaBetaEta : Term Var → Term Var → Prop
 
 #check FullEta
 
--- instance : @LambdaTheory Var (ThLambdaBetaEta) :=
---   ⟨ThLambdaBetaEta.beta, ThLambdaBetaEta.app, ThLambdaBetaEta.refl, ThLambdaBetaEta.trans, ThLambdaBetaEta.sym⟩
+instance : @LambdaTheory Var (ThLambdaBetaEta) :=
+  ⟨ThLambdaBetaEta.beta, ThLambdaBetaEta.xi, ThLambdaBetaEta.app, ThLambdaBetaEta.refl, ThLambdaBetaEta.trans, ThLambdaBetaEta.sym⟩
 
 end LambdaBetaEta

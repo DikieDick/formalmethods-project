@@ -11,12 +11,16 @@ open LambdaCalculus.LocallyNameless.Untyped
 open Term
 
 universe u
-variable {Var : Type u}
+variable {Var : Type u} [DecidableEq Var] [HasFresh Var]
 variable {α : Type} [Listing α]
 
 @[simp]
 def subst_rho (ρ : ℕ → Set α) (n : ℕ) (d : Set α) : ℕ → Set α :=
   fun x => if x = n then d else ρ (x)
+
+@[simp]
+def subst_sigma (σ : Var → Set α) (x : Var) (d : Set α) : Var → Set α :=
+  fun y => if y = x then d else σ y
 
 @[simp]
 def DeBruijnShift (ρ : ℕ → Set α ): ℕ → Set α :=
@@ -86,11 +90,7 @@ lemma interp_K:
       simp
       grind
 
-
-
-
 ---------------------------------------------------------------------------------
-
 
 open GraphModel
 
@@ -146,8 +146,6 @@ continuous fun d ↦ 〚P〛_{subst_rho (DeBruijnShift ρ) i d,σ} := by
   | fvar x => apply GraphModel.continuous_const
   | app N Q ihN ihQ =>
     simp
-    -- Note that this could also be proven by showing that this function rewrites to S ( apply ∘ A ) B
-    -- showing that S is continuous and then using the fact that composition is continuous
     have (A : Set α → Set α) (B : Set α → Set α) (hA : continuous A) (hB : continuous B):
       continuous fun d ↦ apply (A d) (B d) := by
       apply continuous₂_compose
@@ -167,86 +165,81 @@ continuous fun d ↦ 〚P〛_{subst_rho (DeBruijnShift ρ) i d,σ} := by
 
 ---------------------------------------------------------------------------------
 
-variable [HasFresh Var]
+lemma interp_open_rec (M : Term Var) (n : ℕ) (x : Var) (hx : x ∉ M.fv) (d : Set α) (ρ : ℕ → Set α) (σ : Var → Set α) :
+  Interp (subst_rho ρ n d) σ M = Interp ρ (subst_sigma σ x d) (openRec n (fvar x) M) := by
+  induction M generalizing n ρ with
+  | fvar y =>
+    simp only [Interp, openRec, subst_sigma, right_eq_ite_iff]
+    have : y ≠ x := by grind
+    simp [this]
+  | bvar m =>
+    cases m with
+    | zero =>
+      cases n with
+      | zero =>
+        simp [openRec]
+      | succ n =>
+        simp [openRec]
+    | succ m =>
+      simp [openRec, Interp]
+      by_cases h : n = m + 1
+      · subst h
+        simp
+      · simp [h]
+        grind only
+  | abs O ih =>
+    simp only [openRec, Interp]
+    congr 1
+    ext es e
+    have env_comm : subst_rho (DeBruijnShift (subst_rho ρ n d)) 0 es =
+                    subst_rho (subst_rho (DeBruijnShift ρ) 0 es) (n + 1) d := by
+      ext z _
+      cases z with
+      | zero => simp
+      | succ z => simp
+    rw [env_comm]
+    rw [ih]
+    simp [fv] at hx
+    assumption
+  | app O P ih₁ ih₂ =>
+    simp only [openRec, Interp]
+    congr 1
+    · grind
+    · grind
 
-lemma interp_ξ [fresh : HasFresh Var] {xs : Finset Var}
-(h: ∀ x ∉ xs, 〚M ^ fvar x〛_{ρ,σ} = 〚N ^ fvar x〛_{ρ,σ}) : 〚M.abs〛_{ρ,σ} = 〚N.abs〛_{ρ,σ} := by
-  -- have h2:= @redex_abs_cong _ M --- A GENERAL BIG SORRY
-  have h1:= fresh.fresh_notMem xs
-  specialize h (fresh.fresh xs) h1
-  rw [<-DeBruijnSubst, <-DeBruijnSubst] at h
-  simp at h
-  -- have h:= DeBruijnSubst M
-  simp_all
-  unfold G
-  ext x
-  constructor
-  · rintro ⟨ b , β, h1, h2 ⟩
-    use b, β
-    constructor
-    · assumption
-    · simp_all
-      have hmaybe2: (toSet β) = (σ (Cslib.fresh xs)) := by sorry
-      rwa [hmaybe2, <-h, <-hmaybe2]
-  · rintro ⟨ b , β, h1, h2 ⟩
-    use b, β
-    constructor
-    · assumption
-    · simp_all
-      have hmaybe2: (toSet β) = (σ (Cslib.fresh xs)) := by sorry
-      rwa [hmaybe2, h, <-hmaybe2]
+lemma interp_ξ (xs : Finset Var)
+(h: ∀ x ∉ xs, ∀ (ρ : ℕ → Set α) (σ : Var → Set α),
+〚M ^ fvar x〛_{ρ,σ} = 〚N ^ fvar x〛_{ρ,σ}) : 〚M.abs〛_{ρ,σ} = 〚N.abs〛_{ρ,σ}
+:= by
+  dsimp [Interp]
+  congr 2
+  ext d a
+  let exl_vars := M.fv ∪ N.fv ∪ xs
+  have ⟨f, f_fresh⟩ := fresh_exists exl_vars
 
+  have hM : f ∉ M.fv := by grind
+  have hN : f ∉ N.fv := by grind
+  have hxs : f ∉ xs := by grind
+
+  rw [interp_open_rec M 0 f hM d (DeBruijnShift ρ) σ]
+  rw [interp_open_rec N 0 f hN d (DeBruijnShift ρ) σ]
+  specialize h f hxs (DeBruijnShift ρ) (subst_sigma σ f d)
+  simp [open'] at h
+  rw [h]
 
 ---------------------------------------------------------------------------------
 
--- Prove Interp is a model theory
+-- Prove Interp is a λ-theory
 
 open LT
 
-def InterpRel (ρ : ℕ → Set α) (σ : Var → Set α)
- (M N : Term Var) : Prop := Interp ρ σ M = Interp ρ σ N
-
-instance : LambdaTheory (fun M N => @InterpRel _ _ _ ρ σ M N) where
-  beta := by
-    intro M N h
-    unfold InterpRel
-    induction h
-    expose_names
-    simp
-    rw [F_G_eq_id]
-    apply DeBruijnSubst
-    apply DeBruijnSubst_continuous
-  xi := by
-    intros M N xs
-    unfold InterpRel at *
-    apply interp_ξ
-  app:= by
-    intros M N P Q hMN hPQ
-    unfold InterpRel at *
-    unfold Interp
-    rw [hMN, hPQ]
-  refl := by
-    intros M
-    unfold InterpRel
-    rfl
-  trans := by
-    intros M N Q hMN hNQ
-    unfold InterpRel at *
-    grind
-  sym := by
-    intros M N h
-    unfold InterpRel at *
-    symm
-    assumption
-
---------------------------------------------------------------------------------
--- Prove beta-equvialence entails model interpretation equality
-
+def InterpRel (M N : Term Var) : Prop :=
+  ∀ (ρ : ℕ → Set α) (σ : Var → Set α), 〚M〛_{ρ,σ} = 〚N〛_{ρ,σ}
 
 -- Prove beta-step entails model interpretation equality
-lemma beta_step_imp_interp_eq {ρ : ℕ → Set α} {σ : Var → Set α}
+lemma beta_step_imp_interp_eq (ρ : ℕ → Set α) (σ : Var → Set α)
 {A B : Term Var} (h: A ⭢βᶠ B) : 〚A〛_{ρ,σ} = 〚B〛_{ρ,σ} := by
-  induction h
+  induction h generalizing ρ σ
   · expose_names
     cases M with
     | app a b =>
@@ -265,27 +258,43 @@ lemma beta_step_imp_interp_eq {ρ : ℕ → Set α} {σ : Var → Set α}
     rw [a_ih]
   · expose_names
     simp at h
-    apply interp_ξ a_ih
+    apply interp_ξ xs
+    · intro x hx ρ σ
+      apply a_ih x hx ρ σ
 
 -- Prove multi-beta-step entails model interpretation equality
-lemma multi_beta_imp_interp_eq {ρ : ℕ → Set α} {σ : Var → Set α} (A B : Term Var):
+lemma multi_beta_imp_interp_eq (ρ : ℕ → Set α) (σ : Var → Set α) (A B : Term Var):
 (A ↠βᶠ B) -> 〚 A 〛_{ρ,σ} = 〚 B 〛_{ρ,σ}
  := by
  intro h
- induction h
+ induction h generalizing ρ σ
  · rfl
  · expose_names
    rw [a_ih]
-   apply (beta_step_imp_interp_eq h_1)
-
-
-variable [DecidableEq Var]
+   apply (beta_step_imp_interp_eq ρ σ h_1)
 
 -- Prove beta-equality entails model interpretation equality
-lemma beta_eq_imp_interp_eq {ρ : ℕ → Set α} {σ : Var → Set α} (A B : Term Var):
+lemma beta_eq_imp_interp_eq (ρ : ℕ → Set α) (σ : Var → Set α) (A B : Term Var):
 (A ≡β B) -> 〚 A 〛_{ρ,σ} = 〚 B 〛_{ρ,σ}
   := by
   intro h
   obtain ⟨Q,⟨hmA, hmB⟩⟩:= (common_reduct_of_BetaEquiv A B h)
-  rw [multi_beta_imp_interp_eq _ _ hmB]
-  exact multi_beta_imp_interp_eq _ _ hmA
+  rw [multi_beta_imp_interp_eq ρ σ _ _ hmB]
+  exact multi_beta_imp_interp_eq ρ σ _ _ hmA
+
+instance : LambdaTheory (fun (M N : Term Var) => @InterpRel Var α _ M N) where
+  beta M N h ρ σ := by
+    apply beta_eq_imp_interp_eq
+    apply Relation.EqvGen.rel
+    apply Xi.base h
+  xi M N xs h ρ σ := by
+    apply interp_ξ xs h
+  app M N P Q hMN hPQ ρ σ:= by
+    unfold Interp
+    rw [hMN, hPQ]
+  refl M ρ σ := by rfl
+  trans M N Q hMN hNQ ρ σ := (hMN ρ σ).trans (hNQ ρ σ)
+  sym M N h ρ σ := (h ρ σ).symm
+
+--------------------------------------------------------------------------------
+-- Prove beta-equvialence entails model interpretation equality
