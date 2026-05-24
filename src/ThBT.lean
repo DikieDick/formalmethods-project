@@ -35,10 +35,35 @@ lemma List.BetaEquiv.get_index {Var : Type u} {as bs : List (Term Var)} (h : as.
     | succ i =>
       exact ih i _ _
 
+lemma nfoldopen_preserves_beta (t₁ t₂ : Term Var) (L : List Var) : (t₁ ≡β t₂) → (nfoldOpen L t₁) ≡β (nfoldOpen L t₂) := by
+  intro h
+  induction L generalizing t₁ t₂
+  case nil => simp ; assumption
+  case cons l L ih =>
+    apply ih
+    induction h
+    case rel h =>
+      constructor
+      cases h
+      case a.base x y h =>
+        grind
+      case a.appL x y z h₁ h₂ =>
+        sorry
+      case a.appR x y z h₁ h₂ =>
+        sorry
+      case a.abs x y s h =>
+        sorry
+    case refl =>
+      apply Relation.EqvGen.refl
+    case symm h ih =>
+      apply Relation.EqvGen.symm _ _ ih
+    case trans h₁ h₂ ih₁ ih₂ =>
+      apply Relation.EqvGen.trans _ _ _ ih₁ ih₂
+
 -- Lemma 3.9
-lemma BT_eq_of_BetaEquiv (M N : Term Var) (T1 T2 : BöhmTree Var) (hMN : M.BetaEquiv N) (h1 : BT Var M T1) (h2 : BT Var N T2) : T1 = T2 := by
+lemma BT_eq_of_BetaEquiv (M N : Term Var) (T1 T2 : BöhmTree Var) (L : List Var) (h_dis : distinct_vars L) (hMN : M.BetaEquiv N) (h1 : BT M L T1) (h2 : BT N L T2) : T1 = T2 := by
   ext n
-  induction n generalizing M N T1 T2 with
+  induction n generalizing M N T1 T2 L with
   | zero => rfl
   | succ n ih =>
     cases h1 with
@@ -49,53 +74,65 @@ lemma BT_eq_of_BetaEquiv (M N : Term Var) (T1 T2 : BöhmTree Var) (hMN : M.BetaE
       | hnf =>
         have eqHnf := HnfEq_of_BetaEquiv N M hMN.symm
         grind -- contradiction
-    | hnf term num_children term_num_abs term_base_var term_apps subtrees h_1 h_sub1 =>
+    | hnf term_1 abs_vars_1 term_base_var_1 num_apps_1 term_apps_1 subtrees_1 L_1 h_hnf_1 h_vars_free_1 h_distinct_1 h_L_1 =>
       cases h2 with
       | no_hnf _ h2 =>
         have eqHnf := HnfEq_of_BetaEquiv M N hMN
         grind
-      | hnf term_1 num_children_1 term_num_abs_1 term_base_var_1 term_apps_1 subtrees_1 h_3 h_sub2 =>
-        obtain ⟨_, hM_eqv⟩ := h_1
-        obtain ⟨_, hN_eqv⟩ := h_3
-
-        have hMN_hnf : M.BetaEquiv _ := Relation.EqvGen.trans _ _ _ hMN hN_eqv
+      | hnf term_2 abs_vars_2 term_base_var_2 num_apps_2 term_apps_2 subtrees_2 L_2 h_hnf_2 h_vars_free_2 h_distinct_2 h_L_2 =>
+        obtain ⟨_, h_equiv_1⟩ := h_hnf_1
+        obtain ⟨_, h_equiv_2⟩ := h_hnf_2
+        have hMN_hnf : M.BetaEquiv _ := Relation.EqvGen.trans _ _ _ hMN h_equiv_2
         -- We apply Lemma 3.5
-        have ⟨h_num_abs_eq, h_var_eq, h_apps_BetaEquiv⟩ := hnfs_similar_fvar _ _ _ _ _ _ M hM_eqv hMN_hnf
-        have h_list_len : term_apps.toList.length = term_apps_1.toList.length := helper h_apps_BetaEquiv
-        -- We have equality of the length of the lists that we got from vector.to_list
-        have h_len_eq : num_children = num_children_1 := by
-          grind
+        have ⟨h_num_abs_eq, h_var_eq, h_apps_BetaEquiv⟩ := hnfs_similar_fvar _ _ _ _ _ _ M h_equiv_1 hMN_hnf
+        have h_num_apps : num_apps_1 = num_apps_2 := by
+          have := helper h_apps_BetaEquiv
+          cases term_apps_1
+          cases term_apps_2
+          simp_all
+        subst h_num_apps
+        have h_num_apps_1 : num_apps_1 = term_apps_1.toArray.toList.length := by simp
+        have h_num_apps_2 : num_apps_1 = term_apps_2.toArray.toList.length := by simp
+        simp [BöhmTree.hnf, BöhmTree.fold, CoInd.fold, PF.map, PF.pack]
+        congr 1
+        · congr
+        · ext x
+          unfold PF.P instPFBöhmTreeF at x
+          simp at x
+          let new_L : List Var := abs_vars_1 ++ L
+          apply ih (nfoldOpen new_L (term_apps_1[x.down])) (nfoldOpen new_L (term_apps_2[x.down])) _ _ new_L
+          · unfold new_L
+            sorry
+          · apply nfoldopen_preserves_beta
+            exact BetaEquivHelper h_apps_BetaEquiv x.down
+          · apply h_L_1
+          · exact BT_L_sub _ _ _ _ _ _ (h_L_2 _)
 
-        subst h_num_abs_eq h_var_eq h_len_eq
-        simp only [BöhmTree.hnf, BöhmTree.fold, CoInd.fold, PF.map, PF.pack]
-        congr
-        ext x
-        apply ih (term_apps[x.down]) (term_apps_1[x.down]) (subtrees x) (subtrees_1 x)
-        · apply List.BetaEquiv.get_index h_apps_BetaEquiv
-        · apply h_sub1 x
-        · apply h_sub2 x
 
 def ThBT (M N : Term Var) : Prop :=
-  BT Var M = BT Var N
+  ∀ T1 T2 L, distinct_vars L → BT M L T1 → BT N L T2 → T1 = T2
 
 -- We prove that ThBT defines a λ-theory
-instance instThBT : LambdaTheory (Var:=Var) ThBT where
+instance instThBT : LT.LambdaTheory (Var:=Var) ThBT where
   beta M N := by
-    intro h
-    apply BT_eq_of_BetaEquiv
+    intro h T1 T2 L BT1 BT2
+    apply BT_eq_of_BetaEquiv <;> try assumption
     apply Relation.EqvGen.rel
     apply Xi.base
     assumption
   refl M := by
-    apply BT_eq_of_BetaEquiv
+    intro T1 T2 L BT1 BT2
+    apply BT_eq_of_BetaEquiv <;> try assumption
     apply Relation.EqvGen.refl
   sym M N := by
     intro h
-    apply h.symm
+    symm
+    apply h
   trans M N O := by
     unfold ThBT
-    intro h₁ h₂
-    rw [h₁, h₂]
+    intro h₁ h₂ T1 T2 L BT1 BT2
+    -- rw [h₁, h₂]
+    sorry
   -- Requires a bit of work
   xi M N xs h := by
     unfold ThBT
