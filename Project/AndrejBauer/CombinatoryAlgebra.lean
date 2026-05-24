@@ -1,7 +1,13 @@
 import Mathlib.Tactic.NthRewrite
 import Mathlib.Data.Part
-import src.AndrejBauer.Basic
-import src.AndrejBauer.PartialCombinatoryAlgebra
+import Project.AndrejBauer.Basic
+import Project.AndrejBauer.PartialCombinatoryAlgebra
+
+/-
+  Taken from the original by Andrej Bauer:
+  https://github.com/andrejbauer/partial-combinatory-algebras/
+-/
+
 
 /-- A (total) combinatory structure on a set `A`. -/
 class CA (A : Type*) extends HasDot A where

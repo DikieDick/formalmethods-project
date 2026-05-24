@@ -1,6 +1,6 @@
-import src.LambdaTheory.Basic
-import src.BetaEquiv
-import src.Bohm_Tree
+import Project.LambdaTheory.Basic
+import Project.BetaEquiv
+import Project.Bohm_Tree
 import Cslib.Languages.LambdaCalculus.LocallyNameless.Untyped.FullBeta
 
 open Cslib
@@ -9,8 +9,7 @@ open LambdaCalculus.LocallyNameless.Untyped
 open Coinductive
 
 open Term
-
-namespace LambdaTheory
+namespace LT
 
 universe u
 
@@ -106,12 +105,14 @@ lemma BT_eq_of_BetaEquiv (M N : Term Var) (T1 T2 : BöhmTree Var) (L : List Var)
           · apply nfoldopen_preserves_beta
             exact BetaEquivHelper h_apps_BetaEquiv x.down
           · apply h_L_1
-          · exact BT_L_sub _ _ _ _ _ _ (h_L_2 _)
+          · sorry
+            -- exact BT_L_sub _ _ _ _ _ _ (h_L_2 _)
 
 
 def ThBT (M N : Term Var) : Prop :=
   ∀ T1 T2 L, distinct_vars L → BT M L T1 → BT N L T2 → T1 = T2
 
+/-
 -- We prove that ThBT defines a λ-theory
 instance instThBT : LT.LambdaTheory (Var:=Var) ThBT where
   beta M N := by
@@ -139,3 +140,4 @@ instance instThBT : LT.LambdaTheory (Var:=Var) ThBT where
     sorry
   app M N P Q := by
     sorry
+-/

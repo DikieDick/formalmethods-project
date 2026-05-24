@@ -1,7 +1,7 @@
 import Cslib.Languages.LambdaCalculus.LocallyNameless.Untyped.Basic
 import Mathlib.Tactic
 import Coinductive
-import src.ChurchRosser
+import Project.ChurchRosser
 
 open Cslib
 open LambdaCalculus.LocallyNameless.Untyped

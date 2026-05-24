@@ -1,1 +1,0 @@
-LEAN Code written by Andreh Bauer!

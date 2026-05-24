@@ -25,5 +25,5 @@ git = "https://github.com/leanprover-community/mathlib4"
 rev = "v4.30.0-rc2"
 
 [[lean_lib]]
-name = "FormalmethodsProject"
-roots = ["src"]
+defaultTargets = true
+name = "Project"

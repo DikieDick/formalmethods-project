@@ -1,5 +1,5 @@
-import src.LambdaTheory.Basic
-import src.BetaEquiv
+import Project.LambdaTheory.Basic
+import Project.BetaEquiv
 import Cslib.Languages.LambdaCalculus.LocallyNameless.Untyped.FullBeta
 import Cslib.Languages.LambdaCalculus.LocallyNameless.Untyped.FullEta
 
@@ -21,9 +21,7 @@ inductive ThLambdaBetaEta : Term Var → Term Var → Prop
 | refl (M) : ThLambdaBetaEta M M
 | trans (M N P) : ThLambdaBetaEta M N → ThLambdaBetaEta N P → ThLambdaBetaEta M P
 | sym (M N): ThLambdaBetaEta M N → ThLambdaBetaEta N M
--- | eta (M) : LambdaBetaEta (abs (app M (bvar 0))) M -- TODO: Should be outer most
-
-#check FullEta
+| eta (M N) : Eta M N → ThLambdaBetaEta M N
 
 instance : @LambdaTheory Var (ThLambdaBetaEta) :=
   ⟨ThLambdaBetaEta.beta, ThLambdaBetaEta.xi, ThLambdaBetaEta.app, ThLambdaBetaEta.refl, ThLambdaBetaEta.trans, ThLambdaBetaEta.sym⟩
