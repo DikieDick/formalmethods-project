@@ -1,4 +1,4 @@
-import src.LambdaTheory.Basic
+import Project.LambdaTheory.Basic
 import Cslib.Languages.LambdaCalculus.LocallyNameless.Untyped.FullBeta
 import Cslib.Languages.LambdaCalculus.LocallyNameless.Untyped.LcAt
 
@@ -6,11 +6,7 @@ open Cslib
 open LambdaCalculus.LocallyNameless.Untyped
 open Term
 
-
 universe u
-
-lemma helper₃ {Var : Type u} (M O : Term Var) (hM : M.LC) (hO : O.LC) : (M.app O).LC := by
-  grind
 
 @[simp, grind .]
 lemma absLC_of_LC {Var : Type u} [HasFresh Var] {M : Term Var} (h : M.LC): (abs M).LC := by
@@ -48,62 +44,9 @@ lemma LC_rename {Var : Type u} [HasFresh Var] [DecidableEq Var] (x y : Var) {M :
   have h_lcAt_y := lcAt_rename M 0 0 x y h_lcAt
   rwa [← lcAt_iff_LC]
 
-lemma LC_of_absLC_and_LC_term {Var : Type u} [HasFresh Var] [DecidableEq Var] (M b : Term Var) (hMabs : M.abs.LC) (hb : b.LC) : (M⟦0 ↝ b⟧).LC := by
-  induction M with
-  | bvar n =>
-    simp only [openRec]
-    by_cases hn : 0 = n
-    · simp [hn, hb]
-    · simp [hn]
-      cases hMabs with
-      | abs L _ h =>
-        have ⟨x, hx⟩ := fresh_exists L
-        have h_open_LC := h x hx
-        simp only [open', openRec, hn, ↓reduceIte] at h_open_LC
-        assumption
-  | fvar x => grind only [openRec, LC.fvar]
-  | abs O ih =>
-    simp [openRec]
-    cases hMabs with
-    | abs L _ h =>
-      apply LC.abs L
-      intro x hx
-      apply beta_lc
-      · apply LC.abs L
-        intro y hy
-        simp only [open'] at h ⊢
-        sorry
-      · apply LC.fvar
-  | app O P ih₁ ih₂ =>
-    simp [openRec]
-    apply LC.app
-    · cases hMabs with
-      | abs L _ h =>
-        have hO : O.abs.LC := by
-          apply LC.abs L
-          intro y hy
-          specialize h y hy
-          simp [open', openRec] at h ⊢
-          cases h with
-          | app hO hP =>
-            assumption
-        exact ih₁ hO
-    · cases hMabs with
-      | abs L _ h =>
-        have hP : P.abs.LC := by
-          apply LC.abs L
-          intro y hy
-          specialize h y hy
-          simp [open', openRec] at h ⊢
-          cases h with
-          | app hO hP =>
-            assumption
-        exact ih₂ hP
-
-
 @[simp, grind =]
 lemma test {Var : Type u} [HasFresh Var] (M N : Term Var) (hM : M.LC) : M ^ N = M := by
-  grind
+  grind only [= open'.eq_1, =_ open_lc]
 
 lemma helper {Var : Type u} [HasFresh Var] (M N : Term Var) (hM : M.LC) (hN : N.LC): app (abs M) N →βᶠ M:= by
   induction M with

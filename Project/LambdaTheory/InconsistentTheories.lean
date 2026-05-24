@@ -1,7 +1,7 @@
-import src.LambdaTheory.Basic
-import src.LambdaTerms
-import src.BetaEquiv
-import src.LCresults
+import Project.LambdaTheory.Basic
+import Project.LambdaTerms
+import Project.BetaEquiv
+import Project.LCresults
 import Cslib.Languages.LambdaCalculus.LocallyNameless.Untyped.FullBeta
 
 open Cslib
@@ -19,7 +19,6 @@ variable {Var : Type u} [HasFresh Var] [DecidableEq Var]
 
 section KeqKstar
 
--- @[mkLambdaTheory]
 inductive ThKeqKstar : Term Var → Term Var → Prop
 | beta (M N) : Beta M N → ThKeqKstar M N
 | xi (M N : Term Var) (xs : Finset Var) : (∀ x ∉ xs, ThKeqKstar (M ^ fvar x) (N ^ fvar x)) → ThKeqKstar (abs M) (abs N)
@@ -169,7 +168,6 @@ end KeqKstar
 
 section KeqI
 
--- @[mkLambdaTheory]
 inductive ThKeqI : Term Var → Term Var → Prop
 | beta (M N) : Beta M N → ThKeqI M N
 | xi (M N : Term Var) (xs : Finset Var) : (∀ x ∉ xs, ThKeqI (M ^ fvar x) (N ^ fvar x)) → ThKeqI (abs M) (abs N)

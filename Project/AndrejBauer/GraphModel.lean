@@ -1,12 +1,6 @@
-import Mathlib.Data.SetLike.Basic
-import Mathlib.Data.Set.Basic
-import Cslib.Languages.LambdaCalculus.LocallyNameless.Untyped.FullBeta
-
-import src.Basic
-import src.CombinatoryAlgebra
-import src.BetaEquiv
-import src.ChurchRosser
-import src.LambdaTheory.Basic
+import Project.AndrejBauer.Basic
+import Project.AndrejBauer.PartialCombinatoryAlgebra
+import Project.AndrejBauer.CombinatoryAlgebra
 
 /-! We derive from a given section-retraction `List α → α` the
     combinatory algebra structure on `Set α`.
@@ -82,6 +76,7 @@ def monotone₂ (f : Set α → Set α → Set α) :=
   ∀ (S S' T T'), S ⊆ S' → T ⊆ T' → f S T ⊆ f S' T'
 
 /-- A continuous binary map is monotone. -/
+@[simp]
 theorem continuous₂_monotone₂ {f : Set α → Set α → Set α} :
   continuous₂ f → monotone₂ f := by
   intro Cf S S' T T' SS' TT' x xfST
@@ -95,6 +90,7 @@ theorem continuous₂_monotone₂ {f : Set α → Set α → Set α} :
     · assumption
 
 /-- If a binary map is continuous in each arguments separately, then it is continuous. -/
+@[simp]
 theorem continuous₂_separately (f : Set α → Set α → Set α) :
   (∀ S, continuous (f S)) →
   (∀ T, continuous (fun S => f S T)) →
@@ -114,6 +110,7 @@ theorem continuous₂_separately (f : Set α → Set α → Set α) :
       use y
 
 /-- A continuous binary map is continuous as a map of its first argument -/
+@[simp]
 theorem continuous₂_fst (h : Set α → Set α → Set α) :
   continuous₂ h → ∀ S, continuous (h S) := by
   intro Ch S T x
@@ -128,6 +125,7 @@ theorem continuous₂_fst (h : Set α → Set α → Set α) :
     exact continuous₂_monotone₂ Ch S S (toSet z) T (fun ⦃_⦄ a => a) zT xhSz
 
 /-- A continuous binary map is contunuous as a map of its second argument -/
+@[simp]
 theorem continuous₂_snd (h : Set α → Set α → Set α) :
   continuous₂ h → ∀ T, continuous (fun S => h S T) := by
   intro Ch T S x
@@ -142,6 +140,7 @@ theorem continuous₂_snd (h : Set α → Set α → Set α) :
     exact continuous₂_monotone₂ Ch (toSet y) S T T yS (fun ⦃_⦄ a => a) xhyT
 
 /-- The identity map is continuous. -/
+@[simp]
 def continuous_id : continuous (@id (Set α)) := by
   intros S x
   simp only [id_eq]
@@ -161,6 +160,7 @@ def continuous_id : continuous (@id (Set α)) := by
     exact yS xy
 
 /-- A constant map is continuous. -/
+@[simp]
 def continuous_const (T : Set α) : continuous (fun (_ : Set α) => T) := by
   intro S x
   simp only [exists_and_right, iff_and_self]
@@ -172,6 +172,7 @@ def continuous_const (T : Set α) : continuous (fun (_ : Set α) => T) := by
 /-- If `f` is continuous then any finite subset of `f S` is already a subset of some
     `f S'` where `S' ⊆ S` is finite (in the statement `S'` is `toSet z`).
     The lemma is used in the theorem showing that composition preserves continuity. -/
+@[simp]
 lemma continuous_finite {f : Set α → Set α} (ys : List α) (S : Set α) :
   continuous f → (∀ y, y ∈ ys → y ∈ f S) → ∃ z, toSet z ⊆ S ∧ ∀ y, y ∈ ys → y ∈ f (toSet z) := by
   intro Cf ysfS
@@ -210,6 +211,7 @@ lemma continuous_finite {f : Set α → Set α} (ys : List α) (S : Set α) :
         · apply ysfzs ; assumption
 
 -- /-- The composition of continuous maps is continuous. -/
+@[simp]
 theorem continuous_compose (f g : Set α → Set α) :
   continuous f → continuous g → continuous (f ∘ g) := by
   intro Cf Cg S x
@@ -232,6 +234,7 @@ theorem continuous_compose (f g : Set α → Set α) :
     · assumption
 
 /-- The composition of a binary continuous map and continuous maps is continuous. -/
+@[simp]
 theorem continuous₂_compose (f g : Set α → Set α) (h : Set α → Set α → Set α) :
   continuous f →
   continuous g →
@@ -267,6 +270,7 @@ def graph (f : Set α → Set α) : Set α :=
   fun x => fst x ∈ f (toSet (snd x))
 
 /-- Currying combined with graph is continuous -/
+@[simp]
 def continuous_graph (f : Set α → Set α → Set α) :
   continuous₂ f → continuous (fun S => graph (f S)) := by
   intro fC S x
@@ -309,6 +313,7 @@ theorem apply.monotone_snd {S : Set α} : monotone (apply S) := by
   apply apply.monotone₂ _ _ _ _ (fun ⦃_⦄ a => a) TT'
 
 /-- Application is continuous in the first argument. -/
+@[simp]
 theorem apply.continuous_fst (T : Set α) : continuous (apply T) := by
   intros S x
   constructor
@@ -321,6 +326,7 @@ theorem apply.continuous_fst (T : Set α) : continuous (apply T) := by
     apply apply.monotone_snd _ _ yS xTy
 
 /-- Application is continuous in the second argument. -/
+@[simp]
 theorem apply.continuous_snd (S : Set α) : continuous (fun T => apply T S) := by
   intros T x
   constructor
@@ -344,11 +350,13 @@ theorem apply.continuous_snd (S : Set α) : continuous (fun T => apply T S) := b
     · exact yT xyz
 
 /-- Application is continuous. -/
+@[simp]
 theorem apply.continuous₂ : continuous₂ (@apply α _) := by
   apply continuous₂_separately
   · apply apply.continuous_fst
   · apply apply.continuous_snd
 
+@[simp]
 theorem eq_apply_graph (f : Set α → Set α) : continuous f → apply (graph f) = f := by
   intro Cf
   ext S x
@@ -384,12 +392,14 @@ theorem eq_K {A B : Set α} : K ⬝ A ⬝ B = A := by
 
 def S : Set α := graph (fun A => graph (fun B => graph (fun C => (A ⬝ C) ⬝ (B ⬝ C))))
 
+@[simp]
 lemma S.continuous₁ {B C : Set α} : continuous (fun A => (A ⬝ C) ⬝ (B ⬝ C)) := by
   apply continuous₂_compose (fun A => A ⬝ C) (fun _ => B ⬝ C)
   · apply apply.continuous_snd
   · apply continuous_const
   · apply apply.continuous₂
 
+@[simp]
 lemma S.continuous₂ {A C : Set α} : continuous (fun B => (A ⬝ C) ⬝ (B ⬝ C)) := by
   apply continuous₂_compose (fun _ => A ⬝ C) (fun B => B ⬝ C)
   · apply continuous_const
@@ -427,419 +437,3 @@ instance isCA : CA (Set α) where
   S := S
   eq_K := eq_K
   eq_S := eq_S
-
-def F (X : Set α) (Y : Set α) : Set α :=
-  apply X Y
-
-def G_old (f : Set α → Set α) : Set α :=
-fun x => ∃ b β, x = pair b β ∧ b ∈ f (toSet β)
-
-def G (f : Set α → Set α) : Set α := { x | ∃ b β, x = pair b β ∧ b ∈ f (toSet β) }
-
-lemma G_old_eq_G (f : Set α → Set α):  G_old f = G f := by
-  unfold G
-  unfold G_old
-  ext z
-  constructor
-  · rintro ⟨a, b, rfl, hb⟩
-    use a, b
-  · rintro ⟨x, y, rfl, hx⟩
-    use x, y
-
-lemma pair_iff (a b x y : α): pair x y = pair a b ↔ (x=a ∧ y=b) := by
-  constructor
-  · intro h
-    have fst := congrArg fst h
-    have snd := congrArg snd h
-    rw [Listing.eq_fst_pair, Listing.eq_fst_pair] at fst
-    rw [Listing.eq_snd_pair, Listing.eq_snd_pair] at snd
-    exact ⟨fst, snd⟩
-  · intro ⟨hxa, hyb⟩
-    congr
-
-lemma fY_set (f : Set α → Set α) (Y : Set α)
-(h : continuous f):
-f Y = { x | ∃ y, toSet y ⊆ Y ∧ x ∈ f (toSet y) } := by
-  unfold continuous at h
-  ext x
-  constructor
-  · intro hx
-    specialize h Y x
-    obtain ⟨h₁, h₂ ⟩ := h
-    apply h₁ hx
-  · rintro ⟨y, h₁, h₂⟩
-    exact (continuous_monotone h (toSet y) Y h₁) h₂
-
-lemma F_G_eq_id (f : Set α → Set α) (Y : Set α) (h : continuous f ) :
-F (G f) Y = f Y := by
-  rw [fY_set f Y h]
-  unfold F G apply
-  simp
-  ext x
-  constructor
-  · rintro ⟨y, _, a, b, heq, _⟩
-    have h₁ : x= a := by
-      rw [pair_iff] at heq
-      lia
-    have h₂ : y= b := by
-      rw [pair_iff] at heq
-      lia
-    rw [h₁]
-    use b
-    constructor
-    · rw [<-h₂]
-      assumption
-    · assumption
-  · rintro ⟨y, h₁, _⟩
-    use y, h₁, x, y
-
-end GraphModel
-
-namespace Cslib
-namespace LambdaCalculus.LocallyNameless.Untyped.Term
-open Listing
-open LambdaTheory
-
-variable {α : Type} [Listing α]
--- variable (i : α → α)
--- variable (hi : Function.Injective i)
--- variable {A : Set α}
-
-def apply (S : Set α) : Set α → Set α := GraphModel.apply S
-  -- fun T b => ∃ β, toSet β ⊆ T ∧ pair b β ∈ S
-
-def F (X : Set α) (Y : Set α) : Set α :=
-  apply X Y
-
-def G (f : Set α → Set α) : Set α := { x | ∃ b β, x = pair b β ∧ b ∈ f (toSet β) }
-
-universe u
-variable {Var : Type u} [HasFresh Var] [DecidableEq Var]
-
-@[simp]
-def subst_rho (ρ : ℕ → Set α) (n : ℕ) (d : Set α) : ℕ → Set α :=
-  fun x => if x = n then d else ρ x
-
-@[simp]
-def DeBruijnShift (ρ : ℕ → Set α ): ℕ → Set α :=
-  fun n => ρ (n + 1)
-
-@[simp]
-def Interp (ρ : ℕ → Set α) (σ: Var → Set α) : Term Var → Set α
-| fvar x  => (σ x)
-| bvar n  => (ρ n)
-| app a b => (F (Interp ρ σ a) (Interp ρ σ b))
-| abs e   =>  G (fun d => (Interp (subst_rho (DeBruijnShift ρ) 0 d) σ e) )
-
-variable {ρ : ℕ → Set α}
-variable {σ : Var → Set α}
-variable {M N: Term Var}
-
-notation "〚"M"〛_{"ρ","σ"}" => Interp ρ σ M
-
-#check 〚 M 〛_{ρ,σ}
-
--- 2.7
-lemma DeBruijnSubst {α : Type} [Listing α]
- {ρ : ℕ → Set α} {σ: Var → Set α} {P : Term Var}:
-〚M〛_{subst_rho (DeBruijnShift ρ) 0 〚P〛_{ρ,σ},σ} = 〚M ^ P〛_{ρ,σ} := by
-  induction M with
-  | bvar n  =>
-  simp
-  cases n
-  · grind
-  · expose_names
-    simp
-    sorry -- Big issue! SORRY
-  | fvar x  =>
-  have h: 〚(fvar x) ^ P〛_{ρ,σ} = 〚fvar x〛_{ρ,σ} := by grind
-  rw [h]
-  simp
-  | app a b =>
-  expose_names
-  simp
-  have h: 〚(app a b) ^ P〛_{ρ,σ} = 〚app (a ^ P) (b ^ P)〛_{ρ,σ} := by grind
-  rw [h, a_ih, a_ih_1]
-  simp
-  | abs e   =>
-  expose_names
-  simp
-  -- have h: 〚(abs e) ^ P〛_{ρ,σ} = 〚(abs (e ^ P)) 〛_{ρ,σ} := by sorry
-  -- rw [h]
-  -- simp
-  -- have h: 〚e ^ P〛_{subst_rho (DeBruijnShift ρ) 0 d,σ} = 〚e〛_{subst_rho (DeBruijnShift ρ) 0 〚P〛_{ρ,σ},σ}  := by grind
-  -- f_equal
-  -- rw [h, a_ih, a_ih_1]
-  -- simp
-  sorry -- SORRY
-
-
--- @[reducible]
--- instance UntypedLambdaCalculus.hasDot : HasDot (Term Var) where dot := app
-
-def K : Term Var := abs (abs $ bvar 1) -- λxy.x
-def S : Term Var := abs (abs (abs (app (app (bvar 2) (bvar 0)) (app (bvar 1) (bvar 2)))))-- λxyz.xz (yz) =  λ210.02 (12)
-def Kstar : Term Var := abs (abs $ bvar 0) -- λxy.y
-def id : Term Var := abs (bvar 0)
-def id_id : Term Var := app id id
-def ω : Term Var := abs (app (bvar 0) (bvar 0))
-def Ω : Term Var := app ω ω
-
-#check 〚 id 〛_{ρ,σ}
-
-def InterpRel {ρ : ℕ → Set α} {σ : Var → Set α}
- (M N : Term Var) : Prop := Interp ρ σ M = Interp ρ σ N
-
-def continuous (f : Set α → Set α) :=
-  ∀ (S : Set α) (x : α), x ∈ f S ↔ ∃ y : α, toSet y ⊆ S ∧ (x ∈ f (toSet y))
-
-lemma F_G_eq_id (f : Set α → Set α) (Y : Set α) (h : continuous f ) :
-F (G f) Y = f Y := by sorry -- Proved in previous section
-
-
-lemma DeBruijnSubst_continuous (P : Term Var) (i : ℕ) (ρ : ℕ → Set α) (σ : Var → Set α) :
-continuous fun d ↦ 〚P〛_{subst_rho (DeBruijnShift ρ) i d,σ} := by
-  induction P generalizing i ρ with
-  | bvar n =>
-    simp
-    by_cases h: n = i <;> simp [h]
-    · apply GraphModel.continuous_id
-    · apply GraphModel.continuous_const
-  | fvar x => simp; apply GraphModel.continuous_const
-  | app N Q ihN ihQ =>
-    simp
-    -- Note that this could also be proven by showing that this function rewrites to S ( apply ∘ A ) B
-    -- showing that S is continuous and then using the fact that composition is continuous
-    have (A : Set α → Set α) (B : Set α → Set α) (hA : continuous A) (hB : continuous B): continuous fun d ↦ apply (A d) (B d) := by
-      apply GraphModel.continuous₂_compose
-      · exact hA
-      · exact hB
-      exact GraphModel.apply.continuous₂
-    apply this
-    · apply ihN
-    · apply ihQ
-  | abs Q ih =>
-    simp
-    sorry -- SORRY
-
-lemma interp_ξ [fresh : HasFresh Var] {xs : Finset Var}
-(h: ∀ x ∉ xs, 〚M ^ fvar x〛_{ρ,σ} = 〚N ^ fvar x〛_{ρ,σ}) : 〚M.abs〛_{ρ,σ} = 〚N.abs〛_{ρ,σ} := by
-  have h1:= fresh.fresh_notMem xs
-  specialize h (fresh.fresh xs) h1
-  sorry -- SORRY
-
-instance [fresh : HasFresh Var] : LambdaTheory (fun M N => @InterpRel _ _ _ ρ σ M N) where
-  beta := by
-    intro M N h
-    unfold InterpRel
-    induction h
-    expose_names
-    simp
-    rw [F_G_eq_id _ _ (DeBruijnSubst_continuous)]
-    apply DeBruijnSubst
-  xi := by
-    intros M N xs
-    unfold InterpRel at *
-    apply interp_ξ
-  app:= by
-    intros M N P Q hMN hPQ
-    unfold InterpRel at *
-    unfold Interp
-    rw [hMN, hPQ]
-  refl := by
-    intros M
-    unfold InterpRel
-    rfl
-  trans := by
-    intros M N Q hMN hNQ
-    unfold InterpRel at *
-    grind
-  sym := by
-    intros M N h
-    unfold InterpRel at *
-    symm
-    assumption
-
-
--- Example 3.1
-lemma interp_id :
-〚 id 〛_{ρ,σ} = {x | ∃ b, ∃ (β : α), x = (pair b β) ∧ b ∈ toSet β}
- := by
-  unfold id
-  unfold Interp
-  unfold G
-  ext x
-  constructor
-  · intro h
-    obtain ⟨b, ⟨β, ⟨h₁, h₂⟩⟩⟩ := h
-    use b, β
-    constructor
-    · assumption
-    · dsimp [Interp] at h₂
-      assumption
-  · intro h
-    obtain ⟨b, ⟨β, ⟨h₁, h₂⟩⟩⟩ := h
-    use b, β
-    constructor
-    · assumption
-    · dsimp [Interp]
-      assumption
-
-
-lemma interp_omega :
-〚 ω 〛_{ρ,σ} = {x | ∃ b, ∃ (β : α), x = (pair b β) ∧ b ∈ F (toSet β) (toSet β)}
- := by
-  unfold ω
-  unfold Interp
-  unfold G
-  simp
-
-lemma interp_omega' :
-〚 ω 〛_{ρ,σ} = {x | ∃ b, ∃ (β : α), x = (pair b β) ∧ b ∈ {y | ∃ β', toSet β' ⊆ toSet β ∧ pair b β' ∈ toSet β}}
- := by
-  unfold ω
-  unfold Interp
-  unfold G
-  simp
-  constructor
-
-lemma interp_id_id :
-〚 app id id 〛_{ρ,σ} = 〚 id 〛_{ρ,σ}
- := by
-  simp
-  unfold F
-  unfold apply
-  ext b
-  have h₁: ∀ b β, pair b β ∈ 〚id〛_{ρ,σ} ↔ b ∈ toSet β := by
-    intro a β
-    sorry
-  constructor
-  · intro h
-    obtain ⟨β, h⟩ := h
-    rw [h₁ b β] at h
-    grind
-  · intro h
-    simp at *
-    obtain ⟨b', β, h₂, h₃⟩ := h
-    use β
-    simp at *
-    rw [h₂]
-    specialize (h₁ ((pair b' β)) β)
-    rw [h₁]
-    rw [<-h₂]
-    sorry
-
-lemma interp_k :
-〚 K 〛_{ρ,σ} = {x | ∃ β γ c, x = (pair (pair c γ) β) }
- := by
-  unfold K
-  unfold Interp
-  unfold G
-  ext x
-  simp
-  constructor
-  · intro h
-    obtain ⟨b, β, h₁, h₂⟩ := h
-    obtain ⟨c, γ, heq, h₂⟩ := h₂
-    use β, γ, c
-    rwa [heq] at h₁
-  · intro h
-    obtain ⟨β, γ, c, h⟩ := h
-    use ((pair c γ)), β
-    constructor
-    · assumption
-    · unfold G
-      simp
-      use c
-      constructor
-      · use γ
-      · simp [DeBruijnShift]
-        sorry
-
--- Complicated proof based on ranks, not achivable
-lemma interp_Omega :
-〚 Ω 〛_{ρ,σ} = ∅
- := by
-  -- grind
-  -- unfold Ω
-  -- unfold Interp
-  -- unfold F
-  -- unfold apply
-  -- grind
-  sorry
-
-
-lemma beta_step_imp_interp_eq {A B : Term Var} (h: A ⭢βᶠ B) :〚A〛_{ρ,σ} = 〚B〛_{ρ,σ}
-:= by
-  induction h
-  · expose_names
-    cases M with
-    | app a b =>
-    obtain ⟨hM,hb⟩:= h
-    expose_names
-    simp only [Interp]      -- Unfold F and G
-    rw [F_G_eq_id _ _  DeBruijnSubst_continuous]
-    apply DeBruijnSubst
-    | _ => contradiction
-  · expose_names
-    simp
-    rw [a_ih]
-  · expose_names
-    simp
-    rw [a_ih]
-  · expose_names
-    apply interp_ξ a_ih
-
--- Berline Prop 61
-lemma multi_beta_imp_interp_eq (A B : Term Var):
-(A ↠βᶠ B) -> 〚 A 〛_{ρ,σ} = 〚 B 〛_{ρ,σ}
- := by
- intro h
- induction h
- · rfl
- · expose_names
-   rw [a_ih]
-   apply (beta_step_imp_interp_eq h_1)
-
-lemma beta_eq_imp_interp_eq (A B : Term Var):
-(A ≡β B) -> 〚 A 〛_{ρ,σ} = 〚 B 〛_{ρ,σ}
-  := by
-  intro h
-  obtain ⟨Q,⟨hmA, hmB⟩⟩:= (common_reduct_of_BetaEquiv A B h)
-  rw [multi_beta_imp_interp_eq _ _ hmB]
-  exact multi_beta_imp_interp_eq _ _ hmA
-
-
-
--- def Context (t : Term Var ):  Term Var -> Term Var
--- | t
--- | fvar x  => fvar x
--- | bvar n  => bvar n
--- | app a b => app (Context t a) (Context t b)
--- | abs e   => abs (Context t e)
-
--- lemma Interp_eq_iff_context_solvable  (A B : Term Var):
--- 〚 A 〛_{ρ,σ} = 〚 B 〛_{ρ,σ} ↔
-
-
-
-def D_i (A : Set α) : ℕ → Set α
-  | 0       => A
-  | n + 1 =>  Set.union (D_i A n) { x | ∃ β b, x = pair β b ∧ toSet β ⊆ (D_i A n) ∧ b ∈ (D_i A n) }
-
-def D_A (A : Set α): Set α := Set.iUnion (D_i A)
-
-
--- def rank : ℕ → Set α
---   | 0       => A
---   | n + 1 =>  Set.union (D_A n) { x | ∃ β b, x = pair β b ∧ toSet β ⊆ (D_A n) ∧ b ∈ (D_A n) }
-
--- inductive D_A (n: ℕ) where
--- | 0 : A
--- | S : Expr
--- | app : Expr → Expr → Expr
-
-
-
-
-end Ours

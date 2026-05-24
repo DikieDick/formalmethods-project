@@ -1,6 +1,6 @@
 import Mathlib.Data.Finset.Basic
 import Mathlib.Control.Basic
-import src.AndrejBauer.Basic
+import Project.AndrejBauer.Basic
 
 /-!
 # Partial combinatory algebras

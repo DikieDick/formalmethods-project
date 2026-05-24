@@ -1,0 +1,12 @@
+import Project.LCresults
+import Project.EngelerModel
+import Project.ChurchRosser
+import Project.LambdaTheory.LambdaBetaEta
+import Project.LambdaTheory.InconsistentTheories
+import Project.LambdaTheory.Basic
+import Project.BetaEquiv
+import Project.ThBT
+import Project.ModelInterp
+import Project.LambdaTerms
+import Project.Bohm_Tree
+import Project.ModelRelateBT
