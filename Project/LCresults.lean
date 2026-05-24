@@ -1,15 +1,12 @@
-import src.LambdaTheory.Basic
+import Project.LambdaTheory.Basic
 import Cslib.Languages.LambdaCalculus.LocallyNameless.Untyped.FullBeta
+import Cslib.Languages.LambdaCalculus.LocallyNameless.Untyped.LcAt
 
 open Cslib
 open LambdaCalculus.LocallyNameless.Untyped
 open Term
 
-
 universe u
-
-lemma helper₃ {Var : Type u} (M O : Term Var) (hM : M.LC) (hO : O.LC) : (M.app O).LC := by
-  grind
 
 @[simp, grind .]
 lemma absLC_of_LC {Var : Type u} [HasFresh Var] {M : Term Var} (h : M.LC): (abs M).LC := by
@@ -38,9 +35,18 @@ lemma openRec_abs_eq_abs_of_LC {Var : Type u} [HasFresh Var] (M N : Term Var) (h
         exact ih₂
   | abs M ih => grind only [= open'.eq_1, =_ open_lc, absLC_of_LC]
 
+
+lemma lcAt_rename {Var : Type u} (M : Term Var) (k n : ℕ) (x y : Var): LcAt k (M⟦n ↝ fvar x⟧) → LcAt k (M⟦n ↝ fvar y⟧) := by
+  induction M generalizing k n with grind
+
+lemma LC_rename {Var : Type u} [HasFresh Var] [DecidableEq Var] (x y : Var) {M : Term Var} (h : (M⟦0 ↝ fvar x⟧).LC) : (M⟦0 ↝ fvar y⟧).LC := by
+  have h_lcAt : LcAt 0 (M⟦0 ↝ fvar x⟧) := (lcAt_iff_LC (M⟦0 ↝ fvar x⟧)).mpr h
+  have h_lcAt_y := lcAt_rename M 0 0 x y h_lcAt
+  rwa [← lcAt_iff_LC]
+
 @[simp, grind =]
 lemma test {Var : Type u} [HasFresh Var] (M N : Term Var) (hM : M.LC) : M ^ N = M := by
-  grind
+  grind only [= open'.eq_1, =_ open_lc]
 
 lemma helper {Var : Type u} [HasFresh Var] (M N : Term Var) (hM : M.LC) (hN : N.LC): app (abs M) N →βᶠ M:= by
   induction M with

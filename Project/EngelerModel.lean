@@ -1,6 +1,6 @@
-import src.LambdaTheory.Basic
+import Project.LambdaTheory.Basic
 import Cslib.Languages.LambdaCalculus.LocallyNameless.Untyped.FullBeta
-import src.AndrejBauer.GraphModel
+import Project.AndrejBauer.GraphModel
 
 open GraphModel
 open Listing

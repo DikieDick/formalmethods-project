@@ -1,7 +1,7 @@
 import Mathlib.Tactic.NthRewrite
 import Mathlib.Data.Part
-import src.Basic
-import src.PartialCombinatoryAlgebra
+import Project.AndrejBauer.Basic
+import Project.AndrejBauer.PartialCombinatoryAlgebra
 
 /-
   Taken from the original by Andrej Bauer:

@@ -1,6 +1,6 @@
-import src.AndrejBauer.Basic
-import src.AndrejBauer.PartialCombinatoryAlgebra
-import src.AndrejBauer.CombinatoryAlgebra
+import Project.AndrejBauer.Basic
+import Project.AndrejBauer.PartialCombinatoryAlgebra
+import Project.AndrejBauer.CombinatoryAlgebra
 
 /-! We derive from a given section-retraction `List α → α` the
     combinatory algebra structure on `Set α`.

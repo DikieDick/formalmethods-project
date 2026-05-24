@@ -1,5 +1,5 @@
-import src.LambdaTheory.Basic
-import src.BetaEquiv
+import Project.LambdaTheory.Basic
+import Project.BetaEquiv
 import Cslib.Languages.LambdaCalculus.LocallyNameless.Untyped.FullBeta
 import Cslib.Languages.LambdaCalculus.LocallyNameless.Untyped.FullEta
 

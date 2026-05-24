@@ -1,6 +1,6 @@
 import Cslib.Languages.LambdaCalculus.LocallyNameless.Untyped.FullBeta
 import Cslib.Languages.LambdaCalculus.LocallyNameless.Untyped.FullBetaConfluence
-import src.BetaEquiv
+import Project.BetaEquiv
 
 namespace Cslib
 namespace LambdaCalculus.LocallyNameless.Untyped.Term
@@ -13,7 +13,7 @@ variable {Var : Type u} [instFresh: HasFresh Var] [instDecEq: DecidableEq Var]
 
 def multiBeta (M N : Term Var) : Prop := M ↠βᶠ N
 
-#check Relation.ChurchRosser -- Cslib
+-- #check Relation.ChurchRosser -- Cslib
 -- #check Relation.church_rosser -- Mathlib
 
 theorem ChurchRosserMultiBeta : Relation.ChurchRosser (@multiBeta Var) := by

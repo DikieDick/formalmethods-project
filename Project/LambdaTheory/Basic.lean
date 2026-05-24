@@ -1,5 +1,5 @@
 import Cslib.Languages.LambdaCalculus.LocallyNameless.Untyped.FullBeta
-import src.BetaEquiv
+import Project.BetaEquiv
 
 open Cslib
 open LambdaCalculus.LocallyNameless.Untyped
@@ -29,29 +29,8 @@ inductive ThLambdaBeta : Term Var → Term Var → Prop
 | trans (M N P) : ThLambdaBeta M N → ThLambdaBeta N P → ThLambdaBeta M P
 | sym (M N): ThLambdaBeta M N → ThLambdaBeta N M
 
--- def ThLambdaBeta' (M N : Term Var) := M ≡β N
-
--- instance : @LambdaTheory Var (ThLambdaBeta') where
---   beta M N h := by apply Relation.EqvGen.rel; apply Xi.base; assumption
---   xi M N xs h := by
---     apply Relation.EqvGen.rel
---     apply Xi.abs xs
---     intro x hx
---     specialize h x hx
-
---     sorry
---   app M N P Q hMN hPQ := by
---     apply Relation.EqvGen.trans _ (N.app P)
---     · sorry
---     · sorry
---   refl := Relation.EqvGen.refl
---   trans := Relation.EqvGen.trans
---   sym := Relation.EqvGen.symm
-
-
 instance : @LambdaTheory Var (ThLambdaBeta) :=
   ⟨ThLambdaBeta.beta, ThLambdaBeta.xi, ThLambdaBeta.app, ThLambdaBeta.refl, ThLambdaBeta.trans, ThLambdaBeta.sym⟩
-
 
 lemma ThLambdaBeta_of_BetaEquiv {M N : Term Var} (h : M ≡β N) : ThLambdaBeta M N := by
   induction h with
@@ -110,21 +89,6 @@ lemma ThLambdaBeta_iff_BetaEquiv (M N : Term Var) : ThLambdaBeta M N ↔ M.BetaE
       sorry
   · exact ThEq_of_BetaEquiv h
 
--- lemma BetaEquiv_of_ThLambdaBeta {M N : Term Var} (h : ThLambdaBeta M N) : M ≡β N := by
---   induction h with
---   | beta M N h => apply Relation.EqvGen.rel; exact h
---   | refl M => apply Relation.EqvGen.refl
---   | sym M N h ih => apply Relation.EqvGen.symm; exact ih
---   | trans M N P h₁ h₂ ih₁ ih₂ =>
---     apply Relation.EqvGen.trans M N P
---     · assumption
---     · assumption
---   | app M N P Q h₁ h₂ ih₁ ih₂ =>
---     sorry
-
--- lemma ThLambdaBeta_iff_BetaEquiv {M N : Term Var} : ThLambdaBeta M N ↔ M ≡β N :=
---   ⟨BetaEquiv_of_ThLambdaBeta, ThLambdaBeta_of_BetaEquiv⟩
-
 variable {r : Term Var → Term Var → Prop} [LambdaTheory r]
 
 -- This way we can use calc blocks when reasoning over equality in a theory
@@ -155,40 +119,6 @@ lemma app_left₂ {M N : Term Var} (P Q : Term Var) (h : r M N) :
 lemma app_congr {M N P Q : Term Var} (h1 : r M N) (h2 : r P Q) : r (app M P) (app N Q) :=
   LambdaTheory.app M N P Q h1 h2
 
-
 def inconsistent (r : Term Var → Term Var → Prop) [LambdaTheory r] : Prop := ∀ M N : Term Var, M.LC → N.LC → r M N
-
-
--- public meta section
--- open Lean Elab Command Meta
-
--- syntax (name := mkLambdaTheory)
---   "mkLambdaTheory" : attr
-
--- initialize registerBuiltinAttribute {
---   name := `mkLambdaTheory
---   descr := "Generate a LambdaTheory instance"
-
---   add := fun declName stx _ => MetaM.run' do
---     match stx with
---     | `(attr| mkLambdaTheory) =>
---         let currNamespace ← getCurrNamespace
-
---         let beta  := mkIdent <| declName ++ `beta
---         let app   := mkIdent <| declName ++ `app
---         let refl  := mkIdent <| declName ++ `refl
---         let trans := mkIdent <| declName ++ `trans
---         let sym   := mkIdent <| declName ++ `sym
---         let thIdent := mkIdent declName
-
---         liftCommandElabM do
---           modifyScope ({ · with currNamespace })
---           elabCommand <|
---             ← `(instance {Var}: @LambdaTheory Var $thIdent :=
---                   ⟨$beta, $app, $refl, $trans, $sym⟩)
---     | _ => throwError "mkLambdaTheory error"
--- }
-
--- end
 
 end LT

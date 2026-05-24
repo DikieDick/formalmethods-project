@@ -1,6 +1,6 @@
-import src.LambdaTheory.Basic
-import src.BetaEquiv
-import src.Bohm_Tree
+import Project.LambdaTheory.Basic
+import Project.BetaEquiv
+import Project.Bohm_Tree
 import Cslib.Languages.LambdaCalculus.LocallyNameless.Untyped.FullBeta
 
 open Cslib
@@ -9,8 +9,7 @@ open LambdaCalculus.LocallyNameless.Untyped
 open Coinductive
 
 open Term
-
-namespace LambdaTheory
+namespace LT
 
 universe u
 
@@ -36,6 +35,7 @@ lemma List.BetaEquiv.get_index {Var : Type u} {as bs : List (Term Var)} (h : as.
       exact ih i _ _
 
 -- Lemma 3.9
+/-
 lemma BT_eq_of_BetaEquiv (M N : Term Var) (T1 T2 : BöhmTree Var) (hMN : M.BetaEquiv N) (h1 : BT Var M T1) (h2 : BT Var N T2) : T1 = T2 := by
   ext n
   induction n generalizing M N T1 T2 with
@@ -102,3 +102,5 @@ instance instThBT : LambdaTheory (Var:=Var) ThBT where
     sorry
   app M N P Q := by
     sorry
+
+-/

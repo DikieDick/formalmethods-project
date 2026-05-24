@@ -1,9 +1,9 @@
 import Cslib.Languages.LambdaCalculus.LocallyNameless.Untyped.FullBeta
 
-import src.ModelInterp
-import src.AndrejBauer.GraphModel
-import src.BetaEquiv
-import src.Bohm_Tree
+import Project.ModelInterp
+import Project.AndrejBauer.GraphModel
+import Project.BetaEquiv
+import Project.Bohm_Tree
 
 open Listing
 open Cslib
