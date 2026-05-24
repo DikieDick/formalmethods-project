@@ -244,10 +244,23 @@ lemma exists_BT_for_term [DecidableEq Var] (M : Term Var) : ∃ L T, BT M L T :=
     exact ⟨[], BT_bvar n, BT_bvar_correct _⟩
   | fvar x => exact ⟨[], BT_fvar x, BT_fvar_correct _⟩
   | app P Q ihP ihQ =>
-    obtain ⟨LP, TP⟩ := ihP
-    obtain ⟨LQ, TQ⟩ := ihQ
-    sorry
-  | abs => sorry
+    obtain ⟨LP, ⟨P', BT_P⟩⟩ := ihP
+    obtain ⟨LQ, ⟨Q', BT_Q⟩⟩ := ihQ
+    by_cases (∃ n Ps y, hasAsHnf (P.app Q) n Ps y)
+    case neg h =>
+      exists [], BöhmTree.no_hnf
+      apply BT.no_hnf _ _ h
+    case pos h =>
+      obtain ⟨n, Ps, y, hnf⟩ := h
+      sorry
+  | abs P ih =>
+    obtain ⟨L, T, ih⟩ := ih
+    exists L
+    by_cases (∃ n Ps y, hasAsHnf P n Ps y)
+    case neg h =>
+      sorry
+    case pos h =>
+      sorry
 
 def inf_Ytree : BöhmTree Var :=
   .hnf 1 0 ⟨Term.bvar 0, by simp⟩ (λ _ ↦ inf_Ytree)
