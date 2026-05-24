@@ -113,9 +113,8 @@ lemma BT_eq_of_BetaEquiv (M N : Term Var) (T1 T2 : BöhmTree Var) (L : List Var)
 def ThBT (M N : Term Var) : Prop :=
   ∀ T1 T2 L, L.Nodup → BT M L T1 → BT N L T2 → T1 = T2
 
-/-
 -- We prove that ThBT defines a λ-theory
-instance instThBT : LT.LambdaTheory (Var:=Var) ThBT where
+instance instThBT : @LambdaTheory Var (@ThBT Var _) where
   beta M N := by
     intro h T1 T2 L BT1 BT2
     apply BT_eq_of_BetaEquiv <;> try assumption
@@ -127,9 +126,8 @@ instance instThBT : LT.LambdaTheory (Var:=Var) ThBT where
     apply BT_eq_of_BetaEquiv <;> try assumption
     apply Relation.EqvGen.refl
   sym M N := by
-    intro h
-    symm
-    apply h
+    intro h T1 T2 L hL BT1 BT2
+    exact (h T2 T1 L hL BT2 BT1).symm
   trans M N O := by
     unfold ThBT
     intro h₁ h₂ T1 T2 L BT1 BT2
@@ -141,4 +139,3 @@ instance instThBT : LT.LambdaTheory (Var:=Var) ThBT where
     sorry
   app M N P Q := by
     sorry
--/
