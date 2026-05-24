@@ -187,8 +187,7 @@ def böhm_tree_node {Var : Type u} [DecidableEq Var]: bfvar Var → List Var →
     | idx :: _ => ⟨Term.bvar idx, by simp⟩
     | [] => ⟨Term.fvar v, by simp⟩
 
-@[grind →]
-lemma nodup_fvar (L : List Var) : (List.map Term.fvar L).Nodup → L.Nodup := by grind
+lemma nodup_fvar (L : List Var) : (List.map Term.fvar L).Nodup ↔ L.Nodup := by grind
 
 -- Definition 3.7
 coinductive BT {Var : Type u} [DecidableEq Var] : Term Var → List Var → BöhmTree Var → Prop where
@@ -213,8 +212,8 @@ theorem hnf_mono (t : bfvar Var) : monotone fun f ↦ BöhmTree.hnf 1 0 t fun _ 
   grind [coherent, CoInd.leN_le, monotone]
 
 -- BT of free variable together with correctness proof
-def BT_fvar (n : Var) : BöhmTree Var := .hnf 0 0 ⟨Term.fvar n, by simp⟩ (fun n ↦ .no_hnf)
-lemma BT_fvar_correct [DecidableEq Var] (n : Var) : BT (Term.fvar n) [] (BT_fvar n) := by
+def BT_fvar [DecidableEq Var] (n : Var) (L : List Var) : BöhmTree Var := .hnf 0 0 (böhm_tree_node ⟨Term.fvar n, by simp⟩ L) (fun n ↦ .no_hnf)
+lemma BT_fvar_correct [DecidableEq Var] (n : Var) (L : List Var) (hL : L.Nodup) : BT (Term.fvar n) L (BT_fvar n L) := by
   unfold BT_fvar
   apply BT.hnf _ [] ⟨Term.fvar n, by simp⟩ 0 #v[]
   · simp [hasAsHnf]
@@ -222,12 +221,12 @@ lemma BT_fvar_correct [DecidableEq Var] (n : Var) : BT (Term.fvar n) [] (BT_fvar
     · apply isHeadNormal.base
       apply isHeadNormalApp.base_free
     · apply Relation.EqvGen.refl
-  · simp
-  . simp only [List.append_nil, Fin.getElem_fin, IsEmpty.forall_iff]
+  · simp [(nodup_fvar L).mpr hL]
+  . simp only [Fin.getElem_fin, IsEmpty.forall_iff]
 
 -- BT of bound variable together with correctness proof
 def BT_bvar (n : ℕ) : BöhmTree Var := .hnf 0 0 ⟨Term.bvar n, by simp⟩ (fun n ↦ .no_hnf)
-lemma BT_bvar_correct [DecidableEq Var] (n : ℕ) : BT (@Term.bvar Var n) [] (BT_bvar n) := by
+lemma BT_bvar_correct [DecidableEq Var] (n : ℕ) (L : List Var) (hL : L.Nodup) : BT (@Term.bvar Var n) L (BT_bvar n) := by
   unfold BT_bvar
   apply BT.hnf _ [] ⟨Term.bvar n, by simp⟩ 0 #v[]
   · simp [hasAsHnf]
@@ -235,32 +234,28 @@ lemma BT_bvar_correct [DecidableEq Var] (n : ℕ) : BT (@Term.bvar Var n) [] (BT
     · apply isHeadNormal.base
       apply isHeadNormalApp.base_bound
     · apply Relation.EqvGen.refl
-  · simp
-  · simp only [List.append_nil, Fin.getElem_fin, nfoldOpen, IsEmpty.forall_iff]
+  · simp [(nodup_fvar L).mpr hL]
+  · simp only [Fin.getElem_fin, IsEmpty.forall_iff]
 
-lemma exists_BT_for_term [DecidableEq Var] (M : Term Var) : ∃ L T, BT M L T := by
+lemma exists_BT_for_term [DecidableEq Var] (M : Term Var) (L : List Var) (hL : L.Nodup) : ∃ T, BT M L T := by
   induction M with
   | bvar n =>
-    exact ⟨[], BT_bvar n, BT_bvar_correct _⟩
-  | fvar x => exact ⟨[], BT_fvar x, BT_fvar_correct _⟩
+    exact ⟨BT_bvar n, BT_bvar_correct n L hL⟩
+  | fvar x => exact ⟨BT_fvar x L, BT_fvar_correct x L hL⟩
   | app P Q ihP ihQ =>
-    obtain ⟨LP, ⟨P', BT_P⟩⟩ := ihP
-    obtain ⟨LQ, ⟨Q', BT_Q⟩⟩ := ihQ
+    obtain ⟨Ptree, BT_P⟩ := ihP
+    obtain ⟨Qtree, BT_Q⟩ := ihQ
     by_cases (∃ n Ps y, hasAsHnf (P.app Q) n Ps y)
     case neg h =>
-      exists [], BöhmTree.no_hnf
+      exists BöhmTree.no_hnf
       apply BT.no_hnf _ _ h
     case pos h =>
       obtain ⟨n, Ps, y, hnf⟩ := h
       sorry
   | abs P ih =>
-    obtain ⟨L, T, ih⟩ := ih
-    exists L
-    by_cases (∃ n Ps y, hasAsHnf P n Ps y)
-    case neg h =>
-      sorry
-    case pos h =>
-      sorry
+    obtain ⟨tree, ih⟩ := ih
+    -- want to do case distinction on tree
+    sorry
 
 def inf_Ytree : BöhmTree Var :=
   .hnf 1 0 ⟨Term.bvar 0, by simp⟩ (λ _ ↦ inf_Ytree)

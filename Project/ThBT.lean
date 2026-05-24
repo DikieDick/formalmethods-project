@@ -99,14 +99,14 @@ lemma BT_eq_of_BetaEquiv (M N : Term Var) (T1 T2 : BöhmTree Var) (L : List Var)
           unfold PF.P instPFBöhmTreeF at x
           simp at x
           let new_L : List Var := abs_vars_1 ++ L
-          have new_L_nodup : new_L.Nodup := by grind [nodup_fvar]
+          have new_L_nodup : new_L.Nodup := by grind [(nodup_fvar _).mp]
           apply ih (nfoldOpen new_L (term_apps_1[x.down])) (nfoldOpen new_L (term_apps_2[x.down])) _ _ new_L
           · exact new_L_nodup
           · apply nfoldopen_preserves_beta
             exact BetaEquivHelper h_apps_BetaEquiv x.down
           · grind only
           · apply BT_L_sub _ _ _ _ _ _ (h_L_2 _)
-            grind [nodup_fvar]
+            grind [(nodup_fvar _).mp]
             exact new_L_nodup
 
 
@@ -131,11 +131,12 @@ instance instThBT : @LambdaTheory Var (@ThBT Var _) where
   trans M N O := by
     unfold ThBT
     intro h₁ h₂ T1 T2 L hL BT1 BT2
-    -- rw [h₁, h₂]
-    sorry
+    obtain ⟨TN, BTN⟩ := exists_BT_for_term N L hL
+    rw [h₁ T1 TN L hL BT1 BTN, h₂ TN T2 L hL BTN BT2]
   -- Requires a bit of work
   xi M N xs h := by
-    unfold ThBT
+    unfold ThBT at *
+    intros T1 T2 L hL BT1 BT2
     sorry
   app M N P Q := by
     sorry
