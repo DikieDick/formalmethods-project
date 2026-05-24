@@ -116,13 +116,13 @@ def ThBT (M N : Term Var) : Prop :=
 -- We prove that ThBT defines a λ-theory
 instance instThBT : @LambdaTheory Var (@ThBT Var _) where
   beta M N := by
-    intro h T1 T2 L BT1 BT2
+    intro h T1 T2 L hL BT1 BT2
     apply BT_eq_of_BetaEquiv <;> try assumption
     apply Relation.EqvGen.rel
     apply Xi.base
     assumption
   refl M := by
-    intro T1 T2 L BT1 BT2
+    intro T1 T2 L hL BT1 BT2
     apply BT_eq_of_BetaEquiv <;> try assumption
     apply Relation.EqvGen.refl
   sym M N := by
@@ -130,7 +130,7 @@ instance instThBT : @LambdaTheory Var (@ThBT Var _) where
     exact (h T2 T1 L hL BT2 BT1).symm
   trans M N O := by
     unfold ThBT
-    intro h₁ h₂ T1 T2 L BT1 BT2
+    intro h₁ h₂ T1 T2 L hL BT1 BT2
     -- rw [h₁, h₂]
     sorry
   -- Requires a bit of work
