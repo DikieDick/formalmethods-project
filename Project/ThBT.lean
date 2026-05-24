@@ -60,7 +60,7 @@ lemma nfoldopen_preserves_beta (t₁ t₂ : Term Var) (L : List Var) : (t₁ ≡
       apply Relation.EqvGen.trans _ _ _ ih₁ ih₂
 
 -- Lemma 3.9
-lemma BT_eq_of_BetaEquiv (M N : Term Var) (T1 T2 : BöhmTree Var) (L : List Var) (h_dis : distinct_vars L) (hMN : M.BetaEquiv N) (h1 : BT M L T1) (h2 : BT N L T2) : T1 = T2 := by
+lemma BT_eq_of_BetaEquiv (M N : Term Var) (T1 T2 : BöhmTree Var) (L : List Var) (h_dis : L.Nodup) (hMN : M.BetaEquiv N) (h1 : BT M L T1) (h2 : BT N L T2) : T1 = T2 := by
   ext n
   induction n generalizing M N T1 T2 L with
   | zero => rfl
@@ -73,12 +73,12 @@ lemma BT_eq_of_BetaEquiv (M N : Term Var) (T1 T2 : BöhmTree Var) (L : List Var)
       | hnf =>
         have eqHnf := HnfEq_of_BetaEquiv N M hMN.symm
         grind -- contradiction
-    | hnf term_1 abs_vars_1 term_base_var_1 num_apps_1 term_apps_1 subtrees_1 L_1 h_hnf_1 h_vars_free_1 h_distinct_1 h_L_1 =>
+    | hnf term_1 abs_vars_1 term_base_var_1 num_apps_1 term_apps_1 subtrees_1 L_1 h_hnf_1 h_distinct_1 h_L_1 =>
       cases h2 with
       | no_hnf _ h2 =>
         have eqHnf := HnfEq_of_BetaEquiv M N hMN
         grind
-      | hnf term_2 abs_vars_2 term_base_var_2 num_apps_2 term_apps_2 subtrees_2 L_2 h_hnf_2 h_vars_free_2 h_distinct_2 h_L_2 =>
+      | hnf term_2 abs_vars_2 term_base_var_2 num_apps_2 term_apps_2 subtrees_2 L_2 h_hnf_2 h_distinct_2 h_L_2 =>
         obtain ⟨_, h_equiv_1⟩ := h_hnf_1
         obtain ⟨_, h_equiv_2⟩ := h_hnf_2
         have hMN_hnf : M.BetaEquiv _ := Relation.EqvGen.trans _ _ _ hMN h_equiv_2
@@ -99,18 +99,19 @@ lemma BT_eq_of_BetaEquiv (M N : Term Var) (T1 T2 : BöhmTree Var) (L : List Var)
           unfold PF.P instPFBöhmTreeF at x
           simp at x
           let new_L : List Var := abs_vars_1 ++ L
+          have new_L_nodup : new_L.Nodup := by grind [nodup_fvar]
           apply ih (nfoldOpen new_L (term_apps_1[x.down])) (nfoldOpen new_L (term_apps_2[x.down])) _ _ new_L
-          · unfold new_L
-            sorry
+          · exact new_L_nodup
           · apply nfoldopen_preserves_beta
             exact BetaEquivHelper h_apps_BetaEquiv x.down
-          · apply h_L_1
-          · sorry
-            -- exact BT_L_sub _ _ _ _ _ _ (h_L_2 _)
+          · grind only
+          · apply BT_L_sub _ _ _ _ _ _ (h_L_2 _)
+            grind [nodup_fvar]
+            exact new_L_nodup
 
 
 def ThBT (M N : Term Var) : Prop :=
-  ∀ T1 T2 L, distinct_vars L → BT M L T1 → BT N L T2 → T1 = T2
+  ∀ T1 T2 L, L.Nodup → BT M L T1 → BT N L T2 → T1 = T2
 
 /-
 -- We prove that ThBT defines a λ-theory

@@ -187,14 +187,8 @@ def böhm_tree_node {Var : Type u} [DecidableEq Var]: bfvar Var → List Var →
     | idx :: _ => ⟨Term.bvar idx, by simp⟩
     | [] => ⟨Term.fvar v, by simp⟩
 
-@[simp]
-def abs_vars_free {Var : Type u} [DecidableEq Var] (a : List Var) (b : List (Term Var)) : Prop :=
-  ∀ x ∈ a, ∀ y ∈ b, x ∉ y.fv
-
--- Whether all variables in the list are distinct
-@[simp]
-def distinct_vars [BEq Var] (l : List Var) : Prop :=
-  ∀ x (hx : x < l.length) y (hy : y < x), l[x]'hx != l[y]'(by trans x ; exact hy ; exact hx)
+@[grind →]
+lemma nodup_fvar (L : List Var) : (List.map Term.fvar L).Nodup → L.Nodup := by grind
 
 -- Definition 3.7
 coinductive BT {Var : Type u} [DecidableEq Var] : Term Var → List Var → BöhmTree Var → Prop where
@@ -203,8 +197,7 @@ coinductive BT {Var : Type u} [DecidableEq Var] : Term Var → List Var → Böh
       BT T L BöhmTree.no_hnf
   | hnf (term : Term Var) (abs_vars : List Var) (term_base_var : bfvar Var) (num_apps : ℕ) (term_apps : Vector (Term Var) num_apps) (subtrees : ULift (Fin num_apps) → BöhmTree Var) (L : List Var) :
       hasAsHnf term abs_vars.length term_apps.toList term_base_var →
-      abs_vars_free abs_vars (term_apps.toList ++ L.map Term.fvar) →
-      distinct_vars abs_vars →
+      (abs_vars.map Term.fvar ++ term_apps.toList ++ L.map Term.fvar).Nodup →
       (forall (m : ULift (Fin num_apps)), BT (nfoldOpen (abs_vars ++ L) term_apps[m.down]) (abs_vars ++ L) (subtrees m)) →
       BT term L (BöhmTree.hnf num_apps abs_vars.length (böhm_tree_node term_base_var L) subtrees)
 
@@ -230,7 +223,6 @@ lemma BT_fvar_correct [DecidableEq Var] (n : Var) : BT (Term.fvar n) [] (BT_fvar
       apply isHeadNormalApp.base_free
     · apply Relation.EqvGen.refl
   · simp
-  · simp
   . simp only [List.append_nil, Fin.getElem_fin, IsEmpty.forall_iff]
 
 -- BT of bound variable together with correctness proof
@@ -243,7 +235,6 @@ lemma BT_bvar_correct [DecidableEq Var] (n : ℕ) : BT (@Term.bvar Var n) [] (BT
     · apply isHeadNormal.base
       apply isHeadNormalApp.base_bound
     · apply Relation.EqvGen.refl
-  · simp
   · simp
   · simp only [List.append_nil, Fin.getElem_fin, nfoldOpen, IsEmpty.forall_iff]
 
@@ -290,7 +281,6 @@ lemma Ycombinator_tree [DecidableEq Var] [fresh : HasFresh Var] : BT (@Ycombinat
     · simp [nfoldAbs, nfoldApp]
       nth_rw 1 [Ycombinator]
   · simp [omega_f]
-  · simp
   · intros m
     simp [nfoldOpen, Term.open', Term.openRec, omega_f]
     rw [←omega_f_free]
@@ -314,7 +304,7 @@ lemma Ycombinator_tree [DecidableEq Var] [fresh : HasFresh Var] : BT (@Ycombinat
         · nth_rw 1 [inf_Ytree]
     · simp
 
-lemma BT_L_sub {Var} [DecidableEq Var] L₁ L₂ term tree (h_dis₁ : distinct_vars L₁) (h_dis₂ : distinct_vars L₂) : BT (Var:=Var) (nfoldOpen L₁ term) L₁ tree → BT (Var:=Var) (nfoldOpen L₂ term) L₂ tree := by
+lemma BT_L_sub {Var} [DecidableEq Var] L₁ L₂ term tree (h_dis₁ : L₁.Nodup) (h_dis₂ : L₂.Nodup) : BT (Var:=Var) (nfoldOpen L₁ term) L₁ tree → BT (Var:=Var) (nfoldOpen L₂ term) L₂ tree := by
   intros h
   induction term
   case bvar n =>
