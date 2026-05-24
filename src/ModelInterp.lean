@@ -3,6 +3,7 @@ import src.AndrejBauer.GraphModel
 import src.EngelerModel
 import src.ChurchRosser
 import src.LambdaTheory.Basic
+import src.LCresults
 
 open F_G_equal
 open Listing
@@ -94,42 +95,97 @@ lemma interp_K:
 
 open GraphModel
 
+lemma env_comm {α : Type} (n : ℕ) (ρ : ℕ → Set α) (d es: Set α) :
+  subst_rho (DeBruijnShift (subst_rho ρ n d)) 0 es =
+  subst_rho (subst_rho (DeBruijnShift ρ) 0 es) (n + 1) d := by
+    ext z _
+    cases z with
+    | zero => simp
+    | succ z => simp
+
+
+lemma interp_open_rec (M : Term Var) (n : ℕ) (x : Var) (hx : x ∉ M.fv) (d : Set α) (ρ : ℕ → Set α) (σ : Var → Set α) :
+  Interp (subst_rho ρ n d) σ M = Interp ρ (subst_sigma σ x d) (openRec n (fvar x) M) := by
+  induction M generalizing n ρ with
+  | fvar y =>
+    simp only [Interp, openRec, subst_sigma, right_eq_ite_iff]
+    have : y ≠ x := by grind
+    simp [this]
+  | bvar m =>
+    cases m with
+    | zero =>
+      cases n with
+      | zero =>
+        simp [openRec]
+      | succ n =>
+        simp [openRec]
+    | succ m =>
+      simp [openRec, Interp]
+      by_cases h : n = m + 1
+      · subst h
+        simp
+      · simp [h]
+        grind only
+  | abs O ih =>
+    simp only [openRec, Interp]
+    congr 1
+    ext es e
+    rw [env_comm]
+    rw [ih]
+    simp [fv] at hx
+    assumption
+  | app O P ih₁ ih₂ =>
+    simp only [openRec, Interp]
+    congr 1
+    · grind
+    · grind
+
+-- Interp of locally closed M does not change under different ρ
+lemma interp_rho_indep (M : Term Var) (ρ₁ ρ₂ : ℕ → Set α) (σ : Var → Set α) (h : M.LC) :
+  〚M〛_{ρ₁, σ} = 〚M〛_{ρ₂, σ} := by
+  induction h generalizing ρ₁ ρ₂ σ with
+  | fvar x => simp only [Interp]
+  | abs L O h ih =>
+    simp only [Interp]
+    congr 1
+    ext ds d
+    let exl_vars := O.fv ∪ L
+    have ⟨f, f_fresh⟩ := fresh_exists exl_vars
+    have h_f_notin_fvO : f ∉ O.fv := by grind only [= Finset.mem_union]
+    have h_f_notin_L : f ∉ L := by grind only [= Finset.mem_union]
+    specialize ih f h_f_notin_L (DeBruijnShift ρ₁) (DeBruijnShift ρ₂) (subst_sigma σ f ds)
+    rw [interp_open_rec O 0 f h_f_notin_fvO ds (DeBruijnShift ρ₁) σ]
+    rw [interp_open_rec O 0 f h_f_notin_fvO ds (DeBruijnShift ρ₂) σ]
+    simp [open'] at ih
+    rw [ih]
+  | @app O P hO hP ih₁ ih₂ =>
+    simp only [Interp]
+    rw [ih₁ _ _, ih₂ _ _]
+
 -- 2.7 Substitution
-lemma DeBruijnSubst {α : Type} [Listing α]
- {ρ : ℕ → Set α} {σ: Var → Set α} (M P : Term Var):
-〚M〛_{subst_rho (DeBruijnShift ρ) 0 〚P〛_{ρ,σ},σ} = 〚M ^ P〛_{ρ,σ} := by
-  induction M with
-  | bvar n  =>
-  unfold open'
-  unfold openRec
-  cases n
-  · simp_all
-  · sorry
-    -- possible with simp_all of redefine subst_rho
-  | fvar x  =>
-  have h: 〚(fvar x) ^ P〛_{ρ,σ} = 〚fvar x〛_{ρ,σ} := by grind
-  rwa [h]
-  | app a b =>
-  expose_names
-  simp
-  have h: 〚(app a b) ^ P〛_{ρ,σ} = 〚app (a ^ P) (b ^ P)〛_{ρ,σ} := by grind
-  rwa [h, a_ih, a_ih_1]
-  | abs e   =>
-  sorry -- SORRY
-  -- expose_names
-  -- simp_all
-  -- unfold open' at *
-  -- unfold openRec at *
-  -- unfold openRec at *
-  -- cases e
-  -- · simp_all
-  --   grind
-  -- simp
-  -- ext x
-  -- constructor
-  -- · intro h
-  --   unfold subst_rho at h
-  --   simp at h
+lemma DeBruijnSubst (M P : Term Var) (h : P.LC) (n : ℕ) (ρ : ℕ → Set α) (σ : Var → Set α) :
+  〚M〛_{subst_rho ρ n 〚P〛_{ρ,σ}, σ} = 〚openRec n P M〛_{ρ,σ} := by
+  induction M generalizing n ρ with
+  | bvar m =>
+    simp [openRec, Interp]
+    by_cases h : n = m
+    · simp only [h, ↓reduceIte]
+    · simp [h]
+      intro h; have h := h.symm
+      contradiction
+  | fvar x  => simp [Interp, openRec]
+  | app a b ih₁ ih₂ =>
+    simp [openRec, Interp]
+    rw [ih₁, ih₂]
+  | abs e ih =>
+    simp [openRec, Interp]
+    congr 1
+    ext ds d
+    rw [env_comm]
+    let exl_vars := e.fv ∪ P.fv
+    have ⟨f, f_fresh⟩ := fresh_exists exl_vars
+    have := interp_rho_indep P ρ (subst_rho (DeBruijnShift ρ) 0 ds) σ h
+    rw [this, ih (n + 1) (subst_rho (DeBruijnShift ρ) 0 ds)]
 
 lemma G_cont (f : Set α → Set α → Set α) (h : ∀ S : Set α, continuous (f S)) :
 continuous fun S ↦ G (fun T ↦ f S T) := by
@@ -164,48 +220,6 @@ continuous fun d ↦ 〚P〛_{subst_rho (DeBruijnShift ρ) i d,σ} := by
     exact ih
 
 ---------------------------------------------------------------------------------
-
-lemma interp_open_rec (M : Term Var) (n : ℕ) (x : Var) (hx : x ∉ M.fv) (d : Set α) (ρ : ℕ → Set α) (σ : Var → Set α) :
-  Interp (subst_rho ρ n d) σ M = Interp ρ (subst_sigma σ x d) (openRec n (fvar x) M) := by
-  induction M generalizing n ρ with
-  | fvar y =>
-    simp only [Interp, openRec, subst_sigma, right_eq_ite_iff]
-    have : y ≠ x := by grind
-    simp [this]
-  | bvar m =>
-    cases m with
-    | zero =>
-      cases n with
-      | zero =>
-        simp [openRec]
-      | succ n =>
-        simp [openRec]
-    | succ m =>
-      simp [openRec, Interp]
-      by_cases h : n = m + 1
-      · subst h
-        simp
-      · simp [h]
-        grind only
-  | abs O ih =>
-    simp only [openRec, Interp]
-    congr 1
-    ext es e
-    have env_comm : subst_rho (DeBruijnShift (subst_rho ρ n d)) 0 es =
-                    subst_rho (subst_rho (DeBruijnShift ρ) 0 es) (n + 1) d := by
-      ext z _
-      cases z with
-      | zero => simp
-      | succ z => simp
-    rw [env_comm]
-    rw [ih]
-    simp [fv] at hx
-    assumption
-  | app O P ih₁ ih₂ =>
-    simp only [openRec, Interp]
-    congr 1
-    · grind
-    · grind
 
 lemma interp_ξ (xs : Finset Var)
 (h: ∀ x ∉ xs, ∀ (ρ : ℕ → Set α) (σ : Var → Set α),
@@ -243,12 +257,23 @@ lemma beta_step_imp_interp_eq (ρ : ℕ → Set α) (σ : Var → Set α)
   · expose_names
     cases M with
     | app a b =>
-    obtain ⟨hM,hb⟩:= h
-    expose_names
-    simp only [Interp]
-    rw [F_G_eq_id]
-    apply DeBruijnSubst
-    apply DeBruijnSubst_continuous
+      obtain ⟨hM,hb⟩:= h
+      expose_names
+      simp only [Interp]
+      rw [F_G_eq_id]
+      · change 〚M〛_{subst_rho (DeBruijnShift ρ) 0 〚b〛_{ρ,σ}, σ} = 〚M⟦0 ↝ b⟧〛_{ρ,σ}
+        have hb_shift : 〚b〛_{ρ, σ} = 〚b〛_{DeBruijnShift ρ, σ} := interp_rho_indep b _ _ _ hb
+        rw [hb_shift]
+
+        have h_reduced_LC : (M⟦0 ↝ b⟧).LC := by exact LC_of_absLC_and_LC_term M b hM hb
+
+        have rhs_shift : 〚M⟦0 ↝ b⟧〛_{ρ, σ} = 〚M⟦0 ↝ b⟧〛_{DeBruijnShift ρ, σ} :=
+          interp_rho_indep (M⟦0 ↝ b⟧) _ _ _ h_reduced_LC
+
+        rw [rhs_shift]
+
+        apply DeBruijnSubst M b hb 0 (DeBruijnShift ρ) σ
+      · apply DeBruijnSubst_continuous
     | _ => contradiction
   · expose_names
     simp
