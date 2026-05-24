@@ -151,24 +151,24 @@ lemma hnfs_similar_fvar [HasFresh Var] [DecidableEq Var] (n m : ℕ) (y z : bfva
 
 inductive BöhmTreeF (Var : Type u) (T : Type u) : Type u where
   | no_hnf
-  | hnf (n : ℕ) (num_abstractions : ℕ) (v : bfvar Var) (branches : ULift (Fin n) → T)
+  | hnf (num_children : ℕ) (num_abstractions : ℕ) (v : bfvar Var) (branches : ULift (Fin num_children) → T)
 
 instance : Inhabited (BöhmTreeF Var PUnit) where default := .no_hnf
 
 inductive BöhmTreeF.in : Type u where
   | no_hnf
-  | hnf (n : ℕ) (num_abstractions : ℕ) (v : bfvar Var)
+  | hnf (num_children : ℕ) (num_abstractions : ℕ) (v : bfvar Var)
 
 instance : PF (BöhmTreeF Var) where
   P := ⟨BöhmTreeF.in, fun
     | .no_hnf => PEmpty
-    | .hnf n na v => ULift (Fin n)⟩
+    | .hnf nc na v => ULift (Fin nc)⟩
   unpack
     | .no_hnf => .obj (.no_hnf) nofun
-    | .hnf n na v f => .obj (.hnf n na v) f
+    | .hnf nc na v f => .obj (.hnf nc na v) f
   pack
     | .obj (.no_hnf) _ => .no_hnf
-    | .obj (.hnf n na v) f => .hnf n na v f
+    | .obj (.hnf nc na v) f => .hnf nc na v f
   unpack_pack := by rintro _ ⟨⟩ <;> simp
   pack_unpack := by rintro _ (⟨⟨⟩, _⟩ | ⟨⟨⟩⟩) <;> simp ; funext x ; cases x
 
@@ -178,7 +178,7 @@ abbrev BöhmTreeN (Var : Type u) (n : Nat) : Type u := CoIndN (BöhmTreeF Var) n
 def BöhmTree.fold (t : (BöhmTreeF Var) (BöhmTree Var)) : (BöhmTree Var) := CoInd.fold _ t
 def BöhmTree.unfold (t : (BöhmTree Var)) : (BöhmTreeF Var) (BöhmTree Var) := CoInd.unfold _ t
 def BöhmTree.no_hnf : (BöhmTree Var) := BöhmTree.fold .no_hnf
-def BöhmTree.hnf (n : ℕ) (na : ℕ) (t : bfvar Var) (f : ULift (Fin n) → (BöhmTree Var)) : (BöhmTree Var) := BöhmTree.fold (.hnf n na t f)
+def BöhmTree.hnf (num_children : ℕ) (num_abstractions : ℕ) (base_var : bfvar Var) (subtrees : ULift (Fin num_children) → (BöhmTree Var)) : (BöhmTree Var) := BöhmTree.fold (.hnf num_children num_abstractions base_var subtrees)
 
 @[simp]
 def böhm_tree_node {Var : Type u} [DecidableEq Var]: bfvar Var → List Var → bfvar Var
@@ -191,9 +191,9 @@ lemma nodup_fvar (L : List Var) : (List.map Term.fvar L).Nodup ↔ L.Nodup := by
 
 -- Definition 3.7
 coinductive BT {Var : Type u} [DecidableEq Var] : Term Var → List Var → BöhmTree Var → Prop where
-  | no_hnf (T : Term Var) (L : List Var) :
-      ¬(exists n Ps y, hasAsHnf T n Ps y) →
-      BT T L BöhmTree.no_hnf
+  | no_hnf (term : Term Var) (L : List Var) :
+      ¬(exists n Ps y, hasAsHnf term n Ps y) →
+      BT term L BöhmTree.no_hnf
   | hnf (term : Term Var) (abs_vars : List Var) (term_base_var : bfvar Var) (num_apps : ℕ) (term_apps : Vector (Term Var) num_apps) (subtrees : ULift (Fin num_apps) → BöhmTree Var) (L : List Var) :
       hasAsHnf term abs_vars.length term_apps.toList term_base_var →
       (abs_vars.map Term.fvar ++ term_apps.toList ++ L.map Term.fvar).Nodup →
@@ -237,7 +237,20 @@ lemma BT_bvar_correct [DecidableEq Var] (n : ℕ) (L : List Var) (hL : L.Nodup) 
   · simp [(nodup_fvar L).mpr hL]
   · simp only [Fin.getElem_fin, IsEmpty.forall_iff]
 
-lemma exists_BT_for_term [DecidableEq Var] (M : Term Var) (L : List Var) (hL : L.Nodup) : ∃ T, BT M L T := by
+lemma BT_L_sub {Var} [DecidableEq Var] L₁ L₂ term tree (h_dis₁ : L₁.Nodup) (h_dis₂ : L₂.Nodup) : BT (Var:=Var) (nfoldOpen L₁ term) L₁ tree → BT (Var:=Var) (nfoldOpen L₂ term) L₂ tree := by
+  intros h
+  induction term
+  case bvar n =>
+    cases h
+    case no_hnf h =>
+      sorry
+    case hnf =>
+      sorry
+  case fvar x => sorry
+  case abs term ih => sorry
+  case app term₁ term₂ ih₁ ih₂ => sorry
+
+lemma exists_BT_for_term [DecidableEq Var] [fresh : HasFresh Var] (M : Term Var) (L : List Var) (hL : L.Nodup) : ∃ T, BT M L T := by
   induction M with
   | bvar n =>
     exact ⟨BT_bvar n, BT_bvar_correct n L hL⟩
@@ -254,8 +267,22 @@ lemma exists_BT_for_term [DecidableEq Var] (M : Term Var) (L : List Var) (hL : L
       sorry
   | abs P ih =>
     obtain ⟨tree, ih⟩ := ih
-    -- want to do case distinction on tree
-    sorry
+    cases ih
+    case no_hnf h =>
+      exists BöhmTree.no_hnf
+      apply BT.no_hnf
+      sorry
+    case hnf abs_vars term_base_var num_apps term_apps subtrees hnf hNodup hBT =>
+      let new_abs_vars := (fresh.fresh (abs_vars ++ L).toFinset) :: abs_vars
+      exists BöhmTree.hnf num_apps new_abs_vars.length (böhm_tree_node term_base_var L) subtrees
+      apply BT.hnf P.abs new_abs_vars term_base_var num_apps term_apps subtrees L
+      · sorry
+      · sorry
+      · intro m
+        specialize hBT m
+        apply BT_L_sub _ _ _ _ _ _ hBT
+        · sorry
+        · sorry
 
 def inf_Ytree : BöhmTree Var :=
   .hnf 1 0 ⟨Term.bvar 0, by simp⟩ (λ _ ↦ inf_Ytree)
@@ -311,16 +338,3 @@ lemma Ycombinator_tree [DecidableEq Var] [fresh : HasFresh Var] : BT (@Ycombinat
         · simp [Term.open', Term.openRec, omega_f_free]
         · nth_rw 1 [inf_Ytree]
     · simp
-
-lemma BT_L_sub {Var} [DecidableEq Var] L₁ L₂ term tree (h_dis₁ : L₁.Nodup) (h_dis₂ : L₂.Nodup) : BT (Var:=Var) (nfoldOpen L₁ term) L₁ tree → BT (Var:=Var) (nfoldOpen L₂ term) L₂ tree := by
-  intros h
-  induction term
-  case bvar n =>
-    cases h
-    case no_hnf h =>
-      sorry
-    case hnf =>
-      sorry
-  case fvar x => sorry
-  case abs term ih => sorry
-  case app term₁ term₂ ih₁ ih₂ => sorry
