@@ -2,6 +2,12 @@ import Mathlib.Data.Finset.Basic
 import Mathlib.Control.Basic
 import src.Basic
 
+/-
+  Taken from the original by Andrej Bauer:
+  https://github.com/andrejbauer/partial-combinatory-algebras/
+-/
+
+
 /-!
 # Partial combinatory algebras
 

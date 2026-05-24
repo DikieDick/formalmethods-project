@@ -8,6 +8,13 @@ import src.BetaEquiv
 import src.ChurchRosser
 import src.LambdaTheory.Basic
 
+/-
+  Taken from the original by Andrej Bauer:
+  https://github.com/andrejbauer/partial-combinatory-algebras/
+  With modifications by: Dick, Lyra and Sonia
+-/
+
+
 /-! We derive from a given section-retraction `List α → α` the
     combinatory algebra structure on `Set α`.
 -/
@@ -498,7 +505,7 @@ end GraphModel
 namespace Cslib
 namespace LambdaCalculus.LocallyNameless.Untyped.Term
 open Listing
-open LambdaTheory
+open LT
 
 variable {α : Type} [Listing α]
 -- variable (i : α → α)

@@ -3,6 +3,12 @@ import Mathlib.Data.Part
 import src.Basic
 import src.PartialCombinatoryAlgebra
 
+/-
+  Taken from the original by Andrej Bauer:
+  https://github.com/andrejbauer/partial-combinatory-algebras/
+-/
+
+
 /-- A (total) combinatory structure on a set `A`. -/
 class CA (A : Type*) extends HasDot A where
   K : A
