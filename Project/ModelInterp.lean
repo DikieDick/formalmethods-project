@@ -17,16 +17,20 @@ universe u
 variable {Var : Type u} [DecidableEq Var] [HasFresh Var]
 variable {α : Type} [Listing α]
 
+-- We need to define substition for our bound variables
 @[simp]
 def subst_ρ (ρ : ℕ → Set α) (n : ℕ) (d : Set α) : ℕ → Set α :=
   fun x => if x = n then d else ρ (x)
 
+-- Make notation for substitution in ρ
 notation ρ"["n"⥲"d"]" => subst_ρ ρ n d
 
+-- We need to define substition for our free variables
 @[simp]
 def subst_σ (σ : Var → Set α) (x : Var) (d : Set α) : Var → Set α :=
   fun y => if y = x then d else σ y
 
+-- Make notation for substitution in σ
 notation σ"["n"⥵"d"]" => subst_σ σ n d
 
 -- We need to define a shifting function in order to use the De Bruijn notation
@@ -46,6 +50,7 @@ variable {ρ : ℕ → Set α}
 variable {σ : Var → Set α}
 variable {M N: Term Var}
 
+-- Make notation for our set interpretation
 notation "〚"M"〛_{"ρ","σ"}" => Interp ρ σ M
 
 -- We interp our I and K to see if our definition is well-defined according to our paper
@@ -54,13 +59,10 @@ omit [DecidableEq Var] [HasFresh Var] in
 lemma interp_I :
 〚 I 〛_{ρ,σ} = {x | ∃ b, ∃ (β : α), x = (pair b β) ∧ b ∈ toSet β} := by
   ext x
-  constructor
+  constructor <;>
   · rintro ⟨b, ⟨β, ⟨h₁, h₂⟩⟩⟩
     use b, β
-    simp at h₂
-    constructor <;> assumption
-  · rintro ⟨b, ⟨β, ⟨h₁, h₂⟩⟩⟩
-    use b, β
+    have : b ∈ toSet β := by simp_all
     constructor <;> assumption
 
 omit [DecidableEq Var] [HasFresh Var] in
@@ -70,15 +72,15 @@ lemma interp_K:
   ext x
   simp
   constructor
-  · rintro  ⟨b, β, h₁, ⟨c, γ, heq, h₂⟩⟩
+  · rintro  ⟨_, β, h₁, ⟨c, γ, h₂, _⟩⟩
     use β, γ, c
     constructor
-    · rwa [heq] at h₁
+    · rwa [h₂] at h₁
     · grind only
-  · intro  ⟨β, γ, c, h⟩
+  · intro ⟨β, γ, c, _⟩
     use ((pair c γ)), β
     constructor
-    · grind
+    · grind only
     · unfold G
       simp
       grind only
@@ -87,16 +89,17 @@ lemma interp_K:
 
 open GraphModel
 
-lemma env_comm {α : Type} (n : ℕ) (ρ : ℕ → Set α) (d es: Set α) :
-  (DeBruijnShift (ρ[n⥲d]))[0⥲es] = (DeBruijnShift ρ)[0⥲es][n + 1⥲d]
-:= by
-    ext z _
-    cases z with
-    | zero => simp only [subst_ρ, ↓reduceIte, Nat.right_eq_add, Nat.add_eq_zero_iff, one_ne_zero,
-      and_false]
-    | succ z => simp only [subst_ρ, Nat.add_eq_zero_iff, one_ne_zero, and_false, ↓reduceIte,
-      DeBruijnShift, add_tsub_cancel_right, Nat.add_right_cancel_iff]
+-- Helper lemma used 3 times
+lemma env_comm {α : Type} (n : ℕ) (ρ : ℕ → Set α) (d d': Set α) :
+  (DeBruijnShift (ρ[n⥲d]))[0⥲d'] = (DeBruijnShift ρ)[0⥲d'][n + 1⥲d] := by
+  ext z _
+  cases z with
+  | zero => simp only [subst_ρ, ↓reduceIte, Nat.right_eq_add, Nat.add_eq_zero_iff, one_ne_zero,
+    and_false]
+  | succ z => simp only [subst_ρ, Nat.add_eq_zero_iff, one_ne_zero, and_false, ↓reduceIte,
+    DeBruijnShift, add_tsub_cancel_right, Nat.add_right_cancel_iff]
 
+-- Prove how opening a term under our interpretation relates to substitution in σ
 omit [HasFresh Var] in
 lemma interp_open_rec (M : Term Var) (n : ℕ) (x : Var) (hx : x ∉ M.fv) (d : Set α) (ρ : ℕ → Set α) (σ : Var → Set α) :
   Interp (ρ[n⥲d]) σ M = Interp ρ (σ[x⥵d]) (openRec n (fvar x) M) := by
@@ -108,11 +111,7 @@ lemma interp_open_rec (M : Term Var) (n : ℕ) (x : Var) (hx : x ∉ M.fv) (d : 
   | bvar m =>
     cases m with
     | zero =>
-      cases n with
-      | zero =>
-        simp [openRec]
-      | succ n =>
-        simp [openRec]
+      cases n <;> (simp [openRec])
     | succ m =>
       simp [openRec, Interp]
       by_cases h : n = m + 1
@@ -124,16 +123,14 @@ lemma interp_open_rec (M : Term Var) (n : ℕ) (x : Var) (hx : x ∉ M.fv) (d : 
     simp only [openRec, Interp]
     congr 1
     ext es e
-    rw [env_comm]
-    rw [ih]
-    simp [fv] at hx
-    assumption
-  | app O P ih₁ ih₂ =>
+    rw [fv] at hx
+    rwa [env_comm, ih]
+  | app =>
     simp only [openRec, Interp]
     congr 1 <;> grind only [fv, = Finset.mem_union]
 
 -- Interp of locally closed M does not change under different ρ
-lemma interp_rho_indep (M : Term Var) (ρ₁ ρ₂ : ℕ → Set α) (σ : Var → Set α) (h : M.LC) :
+lemma interp_ρ_indep (M : Term Var) (ρ₁ ρ₂ : ℕ → Set α) (σ : Var → Set α) (h : M.LC) :
   〚M〛_{ρ₁, σ} = 〚M〛_{ρ₂, σ} := by
   induction h generalizing ρ₁ ρ₂ σ with
   | fvar x => simp only [Interp]
@@ -176,13 +173,13 @@ lemma DeBruijnSubst (M P : Term Var) (h : P.LC) (n : ℕ) (ρ : ℕ → Set α) 
     rw [env_comm]
     let exl_vars := e.fv ∪ P.fv
     have ⟨f, f_fresh⟩ := fresh_exists exl_vars
-    have := interp_rho_indep P ρ ((DeBruijnShift ρ)[0⥲ds]) σ h
+    have := interp_ρ_indep P ρ ((DeBruijnShift ρ)[0⥲ds]) σ h
     rw [this, ih (n + 1) ((DeBruijnShift ρ)[0⥲ds])]
 
 lemma G_cont (f : Set α → Set α → Set α) (h : ∀ S : Set α, continuous (f S)) :
-continuous fun S ↦ G (fun T ↦ f S T) := by
-  sorry -- SORRY
+continuous fun S ↦ G (fun T ↦ f S T) := by sorry
 
+-- Prove the the De Bruijn substitution is Scott continuous
 omit [DecidableEq Var] [HasFresh Var] in
 lemma DeBruijnSubst_continuous (P : Term Var) (i : ℕ)
 (ρ : ℕ → Set α) (σ : Var → Set α) :
@@ -191,29 +188,23 @@ continuous fun d ↦ 〚P〛_{(DeBruijnShift ρ)[i⥵d],σ} := by
   | bvar n =>
     simp
     by_cases h: n = i <;> simp [h]
-    · apply GraphModel.continuous_id
+    apply GraphModel.continuous_id
   | fvar x => apply GraphModel.continuous_const
   | app N Q ihN ihQ =>
     simp
-    have (A : Set α → Set α) (B : Set α → Set α) (hA : continuous A) (hB : continuous B):
-      continuous fun d ↦ apply (A d) (B d) := by
-      apply continuous₂_compose
-      · exact hA
-      · exact hB
-      exact apply.continuous₂
     unfold F
-    apply this
+    apply continuous₂_compose _ _ _ _ _ apply.continuous₂
     · apply ihN
     · apply ihQ
   | abs Q ih =>
     unfold Interp
     apply G_cont
     intro a
-    specialize ih 0 ((DeBruijnShift ρ)[i⥵a])
-    exact ih
+    exact ih 0 ((DeBruijnShift ρ)[i⥵a])
 
 ---------------------------------------------------------------------------------
 
+-- Prove the xi rule, generalized for two-times usage
 lemma interp_ξ (xs : Finset Var)
 (h: ∀ x ∉ xs, ∀ (ρ : ℕ → Set α) (σ : Var → Set α),
 〚M ^ fvar x〛_{ρ,σ} = 〚N ^ fvar x〛_{ρ,σ}) : 〚M.abs〛_{ρ,σ} = 〚N.abs〛_{ρ,σ}
@@ -221,7 +212,7 @@ lemma interp_ξ (xs : Finset Var)
   dsimp [Interp]
   congr 2
   ext d _
-  have ⟨f, f_fresh⟩ := fresh_exists (M.fv ∪ N.fv ∪ xs)
+  have ⟨f, _⟩ := fresh_exists (M.fv ∪ N.fv ∪ xs)
 
   have hM : f ∉ M.fv := by grind
   have hN : f ∉ N.fv := by grind
@@ -239,50 +230,38 @@ lemma interp_ξ (xs : Finset Var)
 -- Prove beta-step entails model interpretation equality
 lemma beta_step_imp_interp_eq (ρ : ℕ → Set α) (σ : Var → Set α)
 {A B : Term Var} (h: A ⭢βᶠ B) : 〚A〛_{ρ,σ} = 〚B〛_{ρ,σ} := by
-  induction h generalizing ρ σ
-  · expose_names
+  induction h generalizing ρ σ with
+  |  @base M N h  =>
     cases M with
     | app a b =>
       obtain ⟨hM,hb⟩:= h
       expose_names
       simp only [Interp]
       rw [F_G_eq_id]
-      · have hb_shift : 〚b〛_{ρ, σ} = 〚b〛_{DeBruijnShift ρ, σ} := interp_rho_indep b _ _ _ hb
-        rw [hb_shift]
-
-        have h_reduced_LC : (M ^ b).LC := beta_lc hM hb
-
-        have rhs_shift : 〚M ^ b〛_{ρ, σ} = 〚M ^ b〛_{DeBruijnShift ρ, σ} :=
-          interp_rho_indep (M ^ b) _ _ _ h_reduced_LC
-
-        rw [rhs_shift]
-
-        apply DeBruijnSubst M b hb 0 (DeBruijnShift ρ) σ
+      · rw [interp_ρ_indep b _ _ _ hb,
+            interp_ρ_indep (M ^ b) _ _ _ (beta_lc hM hb)]
+        exact DeBruijnSubst M b hb 0 (DeBruijnShift ρ) σ
       · apply DeBruijnSubst_continuous
     | _ => contradiction
-  · expose_names
-    simp only [Interp, a_ih]
-  · expose_names
-    simp only [Interp, a_ih]
-  · expose_names
-    simp at h
+  | abs xs h ih =>
     apply interp_ξ xs
-    · intro x hx ρ σ
-      apply a_ih x hx ρ σ
+    intro x hx ρ σ
+    apply ih x hx ρ σ
+  | _ _ _ ih => simp only [Interp, ih]
 
 -- Prove ↠βᶠ entails model interpretation equality
 lemma multi_beta_imp_interp_eq (ρ : ℕ → Set α) (σ : Var → Set α) (A B : Term Var):
 (A ↠βᶠ B) -> 〚 A 〛_{ρ,σ} = 〚 B 〛_{ρ,σ}
  := by
  intro h
- induction h generalizing ρ σ
- · rfl
- · expose_names
-   rw [a_ih]
-   apply (beta_step_imp_interp_eq ρ σ h_1)
+ induction h generalizing ρ σ with
+ | refl => rfl
+ | tail h₁ h₂ ih =>
+   rw [ih]
+   exact (beta_step_imp_interp_eq ρ σ h₂)
 
 -- Prove β-equivalence entails model interpretation equality
-lemma beta_eq_imp_interp_eq (ρ : ℕ → Set α) (σ : Var → Set α) (A B : Term Var):
+theorem beta_eq_imp_interp_eq (ρ : ℕ → Set α) (σ : Var → Set α) (A B : Term Var):
 (A ≡β B) -> 〚 A 〛_{ρ,σ} = 〚 B 〛_{ρ,σ}
   := by
   intro h
