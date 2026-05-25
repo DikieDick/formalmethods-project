@@ -21,19 +21,7 @@ lemma helper {Var : Type u} {as bs : List (Term Var)} (h : as.BetaEquiv bs) :
   | base => rfl
   | step as bs T₁ T₂ _ _ ih => simp [ih]
 
-lemma List.BetaEquiv.get_index {Var : Type u} {as bs : List (Term Var)} (h : as.BetaEquiv bs)
-    (i : ℕ) (h1 : i < as.length) (h2 : i < bs.length) :
-    as.get ⟨i, h1⟩ ≡β bs.get ⟨i, h2⟩ := by
-  induction h generalizing i with
-  | base =>
-    grind only [= List.length_nil]
-  | step as bs T₁ T₂ hT habs ih =>
-    cases i with
-    | zero =>
-      exact hT
-    | succ i =>
-      exact ih i _ _
-
+/-- β-equivalence is preserved when opening with a free variable. -/
 lemma BetaEquiv_open {l : Var} {t₁ t₂ : Term Var} (h : t₁ ≡β t₂) : (t₁ ^ fvar l) ≡β t₂ ^ fvar l := by
   induction h
   case rel a b h =>
@@ -51,13 +39,15 @@ lemma BetaEquiv_open {l : Var} {t₁ t₂ : Term Var} (h : t₁ ≡β t₂) : (t
   case symm _ _ _ h => apply Relation.EqvGen.symm _ _ h
   case trans _ _ _ _ _ h₁ h₂ => apply Relation.EqvGen.trans _ _ _ h₁ h₂
 
+/-- β-equivalence is preserved when opening with a list of free variables. -/
 lemma nfoldopen_preserves_beta (t₁ t₂ : Term Var) (L : List Var) : (t₁ ≡β t₂) → (nfoldOpen L t₁) ≡β (nfoldOpen L t₂) := by
   intro h
   induction L generalizing t₁ t₂
   case nil => exact h
   case cons l L ih => exact ih _ _ (BetaEquiv_open h)
 
--- Lemma 3.9
+/-- If two terms are β-equivalent, their Böhm trees are the same.
+Lemma 3.9 in Herman's course notes. -/
 lemma BT_eq_of_BetaEquiv (M N : Term Var) (T1 T2 : BöhmTree Var) (L : List Var) (h_dis : L.Nodup) (hMN : M.BetaEquiv N) (h1 : BT M L T1) (h2 : BT N L T2) : T1 = T2 := by
   ext n
   induction n generalizing M N T1 T2 L with
@@ -101,17 +91,17 @@ lemma BT_eq_of_BetaEquiv (M N : Term Var) (T1 T2 : BöhmTree Var) (L : List Var)
           apply ih (nfoldOpen new_L (term_apps_1[x.down])) (nfoldOpen new_L (term_apps_2[x.down])) _ _ new_L
           · exact new_L_nodup
           · apply nfoldopen_preserves_beta
-            exact BetaEquiv_helper h_apps_BetaEquiv x.down
+            apply List.BetaEquiv.get_index h_apps_BetaEquiv
           · grind only
           · apply BT_L_sub _ _ _ _ _ _ (h_L_2 _)
             grind [(nodup_fvar _).mp]
             exact new_L_nodup
 
-
+/-- The theory which equates all terms whose Böhm trees are equal. -/
 def ThBT (M N : Term Var) : Prop :=
   ∀ T1 T2 L, L.Nodup → BT M L T1 → BT N L T2 → T1 = T2
 
--- We prove that ThBT defines a λ-theory
+/-- ThBT defines a λ-theory. -/
 instance instThBT : @LambdaTheory Var (@ThBT Var _) where
   beta M N := by
     intro h T1 T2 L hL BT1 BT2
