@@ -101,7 +101,7 @@ lemma BT_eq_of_BetaEquiv (M N : Term Var) (T1 T2 : BöhmTree Var) (L : List Var)
           apply ih (nfoldOpen new_L (term_apps_1[x.down])) (nfoldOpen new_L (term_apps_2[x.down])) _ _ new_L
           · exact new_L_nodup
           · apply nfoldopen_preserves_beta
-            exact BetaEquivHelper h_apps_BetaEquiv x.down
+            exact BetaEquiv_helper h_apps_BetaEquiv x.down
           · grind only
           · apply BT_L_sub _ _ _ _ _ _ (h_L_2 _)
             grind [(nodup_fvar _).mp]

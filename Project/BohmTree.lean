@@ -13,52 +13,52 @@ universe u
 variable {Var : Type u}
 
 @[grind]
-inductive isHeadRedexApp : Term Var → Prop where
-  | base N P₁ : isHeadRedexApp ((Term.abs N).app P₁)
-  | step T Pₙ : isHeadRedexApp T → isHeadRedexApp (T.app Pₙ)
+inductive IsHeadRedexApp : Term Var → Prop where
+  | base N P₁ : IsHeadRedexApp ((Term.abs N).app P₁)
+  | step T Pₙ : IsHeadRedexApp T → IsHeadRedexApp (T.app Pₙ)
 
 @[grind]
-inductive isHeadRedex : Term Var → Prop where
-  | base T : isHeadRedexApp T → isHeadRedex T
-  | step T : isHeadRedex T → isHeadRedex (Term.abs T)
+inductive IsHeadRedex : Term Var → Prop where
+  | base T : IsHeadRedexApp T → IsHeadRedex T
+  | step T : IsHeadRedex T → IsHeadRedex (Term.abs T)
 
 @[grind]
-inductive isHeadNormalApp : Term Var → Prop where
-  | base_free y : isHeadNormalApp (Term.fvar y)
-  | base_bound n : isHeadNormalApp (Term.bvar n)
-  | step T Pₙ : isHeadNormalApp T → isHeadNormalApp (T.app Pₙ)
+inductive IsHeadNormalApp : Term Var → Prop where
+  | base_free y : IsHeadNormalApp (Term.fvar y)
+  | base_bound n : IsHeadNormalApp (Term.bvar n)
+  | step T Pₙ : IsHeadNormalApp T → IsHeadNormalApp (T.app Pₙ)
 
 @[grind]
-inductive isHeadNormal : Term Var → Prop where
-  | base T : isHeadNormalApp T → isHeadNormal T
-  | step T : isHeadNormal T → isHeadNormal (Term.abs T)
+inductive IsHeadNormal : Term Var → Prop where
+  | base T : IsHeadNormalApp T → IsHeadNormal T
+  | step T : IsHeadNormal T → IsHeadNormal (Term.abs T)
 
 -- Lemma 3.2
-lemma normal_or_redex (T : Term Var) : isHeadRedex T ∨ isHeadNormal T := by
+lemma normal_or_redex (T : Term Var) : IsHeadRedex T ∨ IsHeadNormal T := by
   induction' T with T T T ih T₁ T₂ ih1 ih2
   · right
-    apply isHeadNormal.base
-    apply isHeadNormalApp.base_bound
+    apply IsHeadNormal.base
+    apply IsHeadNormalApp.base_bound
   · right
-    apply isHeadNormal.base
-    apply isHeadNormalApp.base_free
+    apply IsHeadNormal.base
+    apply IsHeadNormalApp.base_free
   · cases ih
-    · left ; apply isHeadRedex.step ; assumption
-    · right; apply isHeadNormal.step ; assumption
+    · left ; apply IsHeadRedex.step ; assumption
+    · right; apply IsHeadNormal.step ; assumption
   · induction T₁
-    · right ; apply isHeadNormal.base ; apply isHeadNormalApp.step ; apply isHeadNormalApp.base_bound
-    · right ; apply isHeadNormal.base ; apply isHeadNormalApp.step ; apply isHeadNormalApp.base_free
-    · left ; apply isHeadRedex.base ; apply isHeadRedexApp.base
+    · right ; apply IsHeadNormal.base ; apply IsHeadNormalApp.step ; apply IsHeadNormalApp.base_bound
+    · right ; apply IsHeadNormal.base ; apply IsHeadNormalApp.step ; apply IsHeadNormalApp.base_free
+    · left ; apply IsHeadRedex.base ; apply IsHeadRedexApp.base
     · rcases ih1 with ih1 | ih1
-      · cases ih1 ; left ; apply isHeadRedex.base ; apply isHeadRedexApp.step ; assumption
-      · cases ih1 ; right ; apply isHeadNormal.base ; apply isHeadNormalApp.step ; assumption
+      · cases ih1 ; left ; apply IsHeadRedex.base ; apply IsHeadRedexApp.step ; assumption
+      · cases ih1 ; right ; apply IsHeadNormal.base ; apply IsHeadNormalApp.step ; assumption
 
 @[grind]
 inductive List.BetaEquiv : List (Term Var) → List (Term Var) → Prop where
   | base : [].BetaEquiv []
   | step as bs T₁ T₂ : T₁.BetaEquiv T₂ → as.BetaEquiv bs → (T₁ :: as).BetaEquiv (T₂ :: bs)
 
-lemma List.BetaEquivLength {L₁ L₂ : List (Term Var)} : L₁.BetaEquiv L₂ → L₁.length = L₂.length := by
+lemma List.BetaEquiv_length {L₁ L₂ : List (Term Var)} : L₁.BetaEquiv L₂ → L₁.length = L₂.length := by
   induction L₁ generalizing L₂ <;> induction L₂
   case nil.nil => simp
   case nil.cons => grind
@@ -69,7 +69,7 @@ lemma List.BetaEquivLength {L₁ L₂ : List (Term Var)} : L₁.BetaEquiv L₂ �
     apply ih
     grind
 
-lemma BetaEquivHelper {n} {L₁ L₂ : Vector (Term Var) n} (h : L₁.toList.BetaEquiv L₂.toList) : ∀ (x : Fin n), L₁[x] ≡β L₂[x] := by
+lemma BetaEquiv_helper {n} {L₁ L₂ : Vector (Term Var) n} (h : L₁.toList.BetaEquiv L₂.toList) : ∀ (x : Fin n), L₁[x] ≡β L₂[x] := by
   sorry
 
 def bfvar (Var : Type u) := { v : Term Var // (exists n, v = Term.bvar n) ∨ (exists v', v = Term.fvar v') }
@@ -124,7 +124,7 @@ lemma reduction_preservation_fvar' (n : ℕ) (y : bfvar Var) (Ps : List (Term Va
   sorry
 
 def hasAsHnf (T : Term Var) (n : ℕ) (Ps : List (Term Var)) (y : bfvar Var) :=
-  let T' := nfoldAbs n (nfoldApp Ps y.val) ; isHeadNormal T' ∧ T.BetaEquiv T'
+  let T' := nfoldAbs n (nfoldApp Ps y.val) ; IsHeadNormal T' ∧ T.BetaEquiv T'
 
 def hasHnf (T : Term Var) := exists n L y, hasAsHnf T n L y
 
@@ -181,7 +181,7 @@ def BöhmTree.no_hnf : (BöhmTree Var) := BöhmTree.fold .no_hnf
 def BöhmTree.hnf (num_children : ℕ) (num_abstractions : ℕ) (base_var : bfvar Var) (subtrees : ULift (Fin num_children) → (BöhmTree Var)) : (BöhmTree Var) := BöhmTree.fold (.hnf num_children num_abstractions base_var subtrees)
 
 @[simp]
-def böhm_tree_node {Var : Type u} [DecidableEq Var]: bfvar Var → List Var → bfvar Var
+def BöhmTreeNode {Var : Type u} [DecidableEq Var]: bfvar Var → List Var → bfvar Var
   | ⟨Term.bvar n, _⟩, L => ⟨Term.bvar n, by simp⟩
   | ⟨Term.fvar v, _⟩, L => match List.idxsOf v L with
     | idx :: _ => ⟨Term.bvar idx, by simp⟩
@@ -198,7 +198,7 @@ coinductive BT {Var : Type u} [DecidableEq Var] : Term Var → List Var → Böh
       hasAsHnf term abs_vars.length term_apps.toList term_base_var →
       (abs_vars.map Term.fvar ++ term_apps.toList ++ L.map Term.fvar).Nodup →
       (forall (m : ULift (Fin num_apps)), BT (nfoldOpen (abs_vars ++ L) term_apps[m.down]) (abs_vars ++ L) (subtrees m)) →
-      BT term L (BöhmTree.hnf num_apps abs_vars.length (böhm_tree_node term_base_var L) subtrees)
+      BT term L (BöhmTree.hnf num_apps abs_vars.length (BöhmTreeNode term_base_var L) subtrees)
 
 @[partial_fixpoint_monotone]
 theorem hnf_mono (t : bfvar Var) : monotone fun f ↦ BöhmTree.hnf 1 0 t fun _ ↦ f := by
@@ -212,14 +212,14 @@ theorem hnf_mono (t : bfvar Var) : monotone fun f ↦ BöhmTree.hnf 1 0 t fun _ 
   grind [coherent, CoInd.leN_le, monotone]
 
 -- BT of free variable together with correctness proof
-def BT_fvar [DecidableEq Var] (n : Var) (L : List Var) : BöhmTree Var := .hnf 0 0 (böhm_tree_node ⟨Term.fvar n, by simp⟩ L) (fun n ↦ .no_hnf)
+def BT_fvar [DecidableEq Var] (n : Var) (L : List Var) : BöhmTree Var := .hnf 0 0 (BöhmTreeNode ⟨Term.fvar n, by simp⟩ L) (fun n ↦ .no_hnf)
 lemma BT_fvar_correct [DecidableEq Var] (n : Var) (L : List Var) (hL : L.Nodup) : BT (Term.fvar n) L (BT_fvar n L) := by
   unfold BT_fvar
   apply BT.hnf _ [] ⟨Term.fvar n, by simp⟩ 0 #v[]
   · simp [hasAsHnf]
     constructor
-    · apply isHeadNormal.base
-      apply isHeadNormalApp.base_free
+    · apply IsHeadNormal.base
+      apply IsHeadNormalApp.base_free
     · apply Relation.EqvGen.refl
   · simp [(nodup_fvar L).mpr hL]
   . simp only [Fin.getElem_fin, IsEmpty.forall_iff]
@@ -231,8 +231,8 @@ lemma BT_bvar_correct [DecidableEq Var] (n : ℕ) (L : List Var) (hL : L.Nodup) 
   apply BT.hnf _ [] ⟨Term.bvar n, by simp⟩ 0 #v[]
   · simp [hasAsHnf]
     constructor
-    · apply isHeadNormal.base
-      apply isHeadNormalApp.base_bound
+    · apply IsHeadNormal.base
+      apply IsHeadNormalApp.base_bound
     · apply Relation.EqvGen.refl
   · simp [(nodup_fvar L).mpr hL]
   · simp only [Fin.getElem_fin, IsEmpty.forall_iff]
@@ -274,7 +274,7 @@ lemma exists_BT_for_term [DecidableEq Var] [fresh : HasFresh Var] (M : Term Var)
       sorry
     case hnf abs_vars term_base_var num_apps term_apps subtrees hnf hNodup hBT =>
       let new_abs_vars := (fresh.fresh (abs_vars ++ L).toFinset) :: abs_vars
-      exists BöhmTree.hnf num_apps new_abs_vars.length (böhm_tree_node term_base_var L) subtrees
+      exists BöhmTree.hnf num_apps new_abs_vars.length (BöhmTreeNode term_base_var L) subtrees
       apply BT.hnf P.abs new_abs_vars term_base_var num_apps term_apps subtrees L
       · sorry
       · sorry
@@ -284,10 +284,10 @@ lemma exists_BT_for_term [DecidableEq Var] [fresh : HasFresh Var] (M : Term Var)
         · sorry
         · sorry
 
-def inf_Ytree : BöhmTree Var :=
-  .hnf 1 0 ⟨Term.bvar 0, by simp⟩ (λ _ ↦ inf_Ytree)
+def InfYtree : BöhmTree Var :=
+  .hnf 1 0 ⟨Term.bvar 0, by simp⟩ (λ _ ↦ InfYtree)
 partial_fixpoint
-def Ytree : BöhmTree Var := .hnf 1 1 ⟨Term.bvar 0, by simp⟩ (λ _ ↦ inf_Ytree)
+def Ytree : BöhmTree Var := .hnf 1 1 ⟨Term.bvar 0, by simp⟩ (λ _ ↦ InfYtree)
 
 def omega_f := @Term.abs Var ((Term.bvar 1).app ((Term.bvar 0).app (Term.bvar 0)))
 def Ycombinator := @Term.abs Var ((Term.bvar 0).app (omega_f.app omega_f))
@@ -309,32 +309,32 @@ lemma Ycombinator_tree [DecidableEq Var] [fresh : HasFresh Var] : BT (@Ycombinat
   have f := fresh.fresh ∅
   apply BT.hnf Ycombinator [f] ⟨Term.bvar 0, by simp⟩ 1 #v[omega_f.app omega_f]
   · constructor
-    · apply isHeadNormal.step
-      apply isHeadNormal.base
-      apply isHeadNormalApp.step
-      apply isHeadNormalApp.base_bound
+    · apply IsHeadNormal.step
+      apply IsHeadNormal.base
+      apply IsHeadNormalApp.step
+      apply IsHeadNormalApp.base_bound
     · simp [nfoldAbs, nfoldApp]
       nth_rw 1 [Ycombinator]
   · simp [omega_f]
   · intros m
     simp [nfoldOpen, Term.open', Term.openRec, omega_f]
     rw [←omega_f_free]
-    apply BT.coinduct (fun term L tree ↦ tree = inf_Ytree ∧ L = [f] ∧ term = (omega_f_free f).app (omega_f_free f))
+    apply BT.coinduct (fun term L tree ↦ tree = InfYtree ∧ L = [f] ∧ term = (omega_f_free f).app (omega_f_free f))
     · rintro term L tree ⟨prop_tree, prop_L, prop_term⟩
       right
-      use [], ⟨Term.fvar f, by simp⟩, 1, #v[(omega_f_free f).app (omega_f_free f)], (λ _ ↦ inf_Ytree)
+      use [], ⟨Term.fvar f, by simp⟩, 1, #v[(omega_f_free f).app (omega_f_free f)], (λ _ ↦ InfYtree)
       simp
       constructor
       · simp [hasAsHnf, nfoldAbs, nfoldApp]
         constructor
-        · apply isHeadNormal.base
-          apply isHeadNormalApp.step
-          apply isHeadNormalApp.base_free
+        · apply IsHeadNormal.base
+          apply IsHeadNormalApp.step
+          apply IsHeadNormalApp.base_free
         · rw [prop_term]
           exact omega_f_beta_f f
       · cases prop_L
         simp [prop_tree]
         constructor
         · simp [Term.open', Term.openRec, omega_f_free]
-        · nth_rw 1 [inf_Ytree]
+        · nth_rw 1 [InfYtree]
     · simp
