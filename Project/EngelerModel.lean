@@ -29,30 +29,20 @@ lemma pair_iff (a b x y : α): pair x y = pair a b ↔ (x=a ∧ y=b) := by
   · intro ⟨hxa, hyb⟩
     congr
 
--- Helper lemmer for our proof of F (G f) Y = f Y
-lemma fY_set {f : Set α → Set α} {Y : Set α} (h : continuous f):
-f Y = { x | ∃ y, toSet y ⊆ Y ∧ x ∈ f (toSet y) } := by
-  ext x
-  constructor
-  · intro hx
-    obtain ⟨h₁, h₂⟩  := (h Y x)
-    simp_all
-  · rintro ⟨y, h₁, h₂⟩
-    have := continuous_monotone h (toSet y) Y h₁
-    exact Set.mem_of_subset_of_mem this h₂
-
 -- Shorter proof due to fY_set being defined as a the above set
 lemma F_G_eq_id (f : Set α → Set α) (Y : Set α) (h : continuous f ) :
 F (G f) Y = f Y := by
-  rw [fY_set h]
+  -- rw [fY_set h]
   unfold F G apply
   ext x
   constructor
-  · rintro ⟨_, _, _, b, _, _⟩
+  · rintro ⟨y, h₁, _, b, _, h₂⟩
     simp_all
-    use b
-  · rintro ⟨b, _, _⟩
+    have := continuous_monotone h
+    exact Set.mem_of_subset_of_mem (this (toSet b) Y h₁) h₂
+  · intro _
+    obtain ⟨h₁, _⟩ := h Y x
     simp_all
-    use b
+    exact Set.mem_of_subset_of_mem (fun _ y ↦ y) h₁
 
 end F_G_equal
