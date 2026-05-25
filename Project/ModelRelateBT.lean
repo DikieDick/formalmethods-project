@@ -3,7 +3,7 @@ import Cslib.Languages.LambdaCalculus.LocallyNameless.Untyped.FullBeta
 import Project.ModelInterp
 import Project.AndrejBauer.GraphModel
 import Project.BetaEquiv
-import Project.Bohm_Tree
+import Project.BohmTree
 
 open Listing
 open Cslib

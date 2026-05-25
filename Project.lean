@@ -8,5 +8,5 @@ import Project.BetaEquiv
 import Project.ThBT
 import Project.ModelInterp
 import Project.LambdaTerms
-import Project.Bohm_Tree
+import Project.BohmTree
 import Project.ModelRelateBT

@@ -1,6 +1,6 @@
 import Project.LambdaTheory.Basic
 import Project.BetaEquiv
-import Project.Bohm_Tree
+import Project.BohmTree
 import Cslib.Languages.LambdaCalculus.LocallyNameless.Untyped.FullBeta
 
 open Cslib
