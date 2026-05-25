@@ -1,4 +1,5 @@
 import Cslib.Languages.LambdaCalculus.LocallyNameless.Untyped.FullBeta
+import Project.LambdaTerms
 import Project.AndrejBauer.GraphModel
 import Project.EngelerModel
 import Project.ChurchRosser
@@ -10,6 +11,7 @@ open Listing
 open Cslib
 open LambdaCalculus.LocallyNameless.Untyped
 open Term
+open LambdaTerms
 
 universe u
 variable {Var : Type u} [DecidableEq Var] [HasFresh Var]
@@ -19,11 +21,13 @@ variable {α : Type} [Listing α]
 def subst_ρ (ρ : ℕ → Set α) (n : ℕ) (d : Set α) : ℕ → Set α :=
   fun x => if x = n then d else ρ (x)
 
-notation ρ"["d"./"n"]" => subst_ρ ρ n d
+notation ρ"["n"⥲"d"]" => subst_ρ ρ n d
 
 @[simp]
 def subst_σ (σ : Var → Set α) (x : Var) (d : Set α) : Var → Set α :=
   fun y => if y = x then d else σ y
+
+notation σ"["n"⥵"d"]" => subst_σ σ n d
 
 -- We need to define a shifting function in order to use the De Bruijn notation
 @[simp]
@@ -36,16 +40,13 @@ def Interp (ρ : ℕ → Set α) (σ: Var → Set α) : Term Var → Set α
 | fvar x  => (σ x)
 | bvar n  => (ρ n)
 | app a b => (F (Interp ρ σ a) (Interp ρ σ b))
-| Term.abs e   =>  G (fun d => (Interp ((DeBruijnShift ρ)[d./0]) σ e) )
+| Term.abs e   =>  G (fun d => (Interp ((DeBruijnShift ρ)[0⥲d]) σ e) )
 
 variable {ρ : ℕ → Set α}
 variable {σ : Var → Set α}
 variable {M N: Term Var}
 
 notation "〚"M"〛_{"ρ","σ"}" => Interp ρ σ M
-
-def K : Term Var := abs (abs $ bvar 1) -- λxy.x
-def I : Term Var := abs (bvar 0)       -- λx. x
 
 -- We interp our I and K to see if our definition is well-defined according to our paper
 -- Example 3.1
@@ -87,16 +88,18 @@ lemma interp_K:
 open GraphModel
 
 lemma env_comm {α : Type} (n : ℕ) (ρ : ℕ → Set α) (d es: Set α) :
-  subst_ρ (DeBruijnShift (subst_ρ ρ n d)) 0 es =
-  subst_ρ (subst_ρ (DeBruijnShift ρ) 0 es) (n + 1) d := by
+  (DeBruijnShift (ρ[n⥲d]))[0⥲es] = (DeBruijnShift ρ)[0⥲es][n + 1⥲d]
+:= by
     ext z _
     cases z with
-    | zero => simp
-    | succ z => simp
+    | zero => simp only [subst_ρ, ↓reduceIte, Nat.right_eq_add, Nat.add_eq_zero_iff, one_ne_zero,
+      and_false]
+    | succ z => simp only [subst_ρ, Nat.add_eq_zero_iff, one_ne_zero, and_false, ↓reduceIte,
+      DeBruijnShift, add_tsub_cancel_right, Nat.add_right_cancel_iff]
 
 omit [HasFresh Var] in
 lemma interp_open_rec (M : Term Var) (n : ℕ) (x : Var) (hx : x ∉ M.fv) (d : Set α) (ρ : ℕ → Set α) (σ : Var → Set α) :
-  Interp (subst_ρ ρ n d) σ M = Interp ρ (subst_σ σ x d) (openRec n (fvar x) M) := by
+  Interp (ρ[n⥲d]) σ M = Interp ρ (σ[x⥵d]) (openRec n (fvar x) M) := by
   induction M generalizing n ρ with
   | fvar y =>
     simp only [Interp, openRec, subst_σ, right_eq_ite_iff]
@@ -114,7 +117,7 @@ lemma interp_open_rec (M : Term Var) (n : ℕ) (x : Var) (hx : x ∉ M.fv) (d : 
       simp [openRec, Interp]
       by_cases h : n = m + 1
       · subst h
-        simp
+        simp only [↓reduceIte, Interp, subst_σ]
       · simp [h]
         grind only
   | abs O ih =>
@@ -127,9 +130,7 @@ lemma interp_open_rec (M : Term Var) (n : ℕ) (x : Var) (hx : x ∉ M.fv) (d : 
     assumption
   | app O P ih₁ ih₂ =>
     simp only [openRec, Interp]
-    congr 1
-    · grind
-    · grind
+    congr 1 <;> grind only [fv, = Finset.mem_union]
 
 -- Interp of locally closed M does not change under different ρ
 lemma interp_rho_indep (M : Term Var) (ρ₁ ρ₂ : ℕ → Set α) (σ : Var → Set α) (h : M.LC) :
@@ -144,7 +145,7 @@ lemma interp_rho_indep (M : Term Var) (ρ₁ ρ₂ : ℕ → Set α) (σ : Var �
     have ⟨f, f_fresh⟩ := fresh_exists exl_vars
     have h_f_notin_fvO : f ∉ O.fv := by grind only [= Finset.mem_union]
     have h_f_notin_L : f ∉ L := by grind only [= Finset.mem_union]
-    specialize ih f h_f_notin_L (DeBruijnShift ρ₁) (DeBruijnShift ρ₂) (subst_σ σ f ds)
+    specialize ih f h_f_notin_L (DeBruijnShift ρ₁) (DeBruijnShift ρ₂) (σ[f⥵ds])
     rw [interp_open_rec O 0 f h_f_notin_fvO ds (DeBruijnShift ρ₁) σ]
     rw [interp_open_rec O 0 f h_f_notin_fvO ds (DeBruijnShift ρ₂) σ]
     simp [open'] at ih
@@ -155,7 +156,7 @@ lemma interp_rho_indep (M : Term Var) (ρ₁ ρ₂ : ℕ → Set α) (σ : Var �
 
 -- 2.7 Substitution
 lemma DeBruijnSubst (M P : Term Var) (h : P.LC) (n : ℕ) (ρ : ℕ → Set α) (σ : Var → Set α) :
-  〚M〛_{subst_ρ ρ n 〚P〛_{ρ,σ}, σ} = 〚openRec n P M〛_{ρ,σ} := by
+  〚M〛_{ρ[n⥲〚P〛_{ρ,σ}],σ} = 〚M⟦n ↝ P⟧〛_{ρ,σ} := by
   induction M generalizing n ρ with
   | bvar m =>
     simp [openRec, Interp]
@@ -175,8 +176,8 @@ lemma DeBruijnSubst (M P : Term Var) (h : P.LC) (n : ℕ) (ρ : ℕ → Set α) 
     rw [env_comm]
     let exl_vars := e.fv ∪ P.fv
     have ⟨f, f_fresh⟩ := fresh_exists exl_vars
-    have := interp_rho_indep P ρ (subst_ρ (DeBruijnShift ρ) 0 ds) σ h
-    rw [this, ih (n + 1) (subst_ρ (DeBruijnShift ρ) 0 ds)]
+    have := interp_rho_indep P ρ ((DeBruijnShift ρ)[0⥲ds]) σ h
+    rw [this, ih (n + 1) ((DeBruijnShift ρ)[0⥲ds])]
 
 lemma G_cont (f : Set α → Set α → Set α) (h : ∀ S : Set α, continuous (f S)) :
 continuous fun S ↦ G (fun T ↦ f S T) := by
@@ -185,7 +186,7 @@ continuous fun S ↦ G (fun T ↦ f S T) := by
 omit [DecidableEq Var] [HasFresh Var] in
 lemma DeBruijnSubst_continuous (P : Term Var) (i : ℕ)
 (ρ : ℕ → Set α) (σ : Var → Set α) :
-continuous fun d ↦ 〚P〛_{subst_ρ (DeBruijnShift ρ) i d,σ} := by
+continuous fun d ↦ 〚P〛_{(DeBruijnShift ρ)[i⥵d],σ} := by
   induction P generalizing i ρ with
   | bvar n =>
     simp
@@ -208,7 +209,7 @@ continuous fun d ↦ 〚P〛_{subst_ρ (DeBruijnShift ρ) i d,σ} := by
     unfold Interp
     apply G_cont
     intro a
-    specialize ih 0 (subst_ρ (DeBruijnShift ρ) i a)
+    specialize ih 0 ((DeBruijnShift ρ)[i⥵a])
     exact ih
 
 ---------------------------------------------------------------------------------

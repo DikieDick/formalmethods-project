@@ -16,7 +16,7 @@ variable {α : Type} [Listing α]
 variable {ρ : ℕ → Set α}
 variable {σ : Var → Set α}
 
-def solvable (T : Term Var) : Prop := True -- Has to be defined
+def solvable (T : Term Var) : Prop := sorry -- Has to be defined
 
 theorem Interp_iff_context_solvable (A B : Term Var):
 〚 A 〛_{ρ,σ} = 〚 B 〛_{ρ,σ} ↔ ∀ C : Term Var -> Term Var, (solvable (C A) ↔  solvable (C B))
