@@ -11,8 +11,7 @@ variable {α : Type} [Listing α]
 
 -- We have defined apply as a applicative structure. We now follow the paper to define
 -- F as apply, and then G as the inverse, such that F (G f) Y = f Y
-def F (X : Set α) (Y : Set α) : Set α :=
-  apply X Y
+def F (X : Set α) (Y : Set α) : Set α := apply X Y
 
 def G (f : Set α → Set α) : Set α := { x | ∃ b β, x = pair b β ∧ b ∈ f (toSet β) }
 
