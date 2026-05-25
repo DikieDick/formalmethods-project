@@ -29,7 +29,7 @@ lemma pair_iff (a b x y : α): pair x y = pair a b ↔ (x=a ∧ y=b) := by
     congr
 
 -- Shorter proof due to fY_set being defined as a the above set
-lemma F_G_eq_id (f : Set α → Set α) (Y : Set α) (h : continuous f ) :
+theorem F_G_eq_id (f : Set α → Set α) (Y : Set α) (h : continuous f ) :
 F (G f) Y = f Y := by
   unfold F G apply
   ext x
