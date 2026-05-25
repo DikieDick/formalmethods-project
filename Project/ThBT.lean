@@ -34,30 +34,28 @@ lemma List.BetaEquiv.get_index {Var : Type u} {as bs : List (Term Var)} (h : as.
     | succ i =>
       exact ih i _ _
 
+lemma BetaEquiv_open {l : Var} {t₁ t₂ : Term Var} (h : t₁ ≡β t₂) : (t₁ ^ fvar l) ≡β t₂ ^ fvar l := by
+  induction h
+  case rel a b h =>
+    apply Relation.EqvGen.rel
+    induction h <;> try grind
+    case a.abs t₁ t₂ t₃ t₄ s h₁ h₂ =>
+      apply Term.FullBeta.step_open_cong_l _ _ _ s _ (by constructor)
+      intro s hs
+      specialize h₁ s hs
+      specialize h₂ s hs
+      generalize eq : fvar s = fvar_s
+      constructor
+      sorry
+  case refl _ => apply Relation.EqvGen.refl
+  case symm _ _ _ h => apply Relation.EqvGen.symm _ _ h
+  case trans _ _ _ _ _ h₁ h₂ => apply Relation.EqvGen.trans _ _ _ h₁ h₂
+
 lemma nfoldopen_preserves_beta (t₁ t₂ : Term Var) (L : List Var) : (t₁ ≡β t₂) → (nfoldOpen L t₁) ≡β (nfoldOpen L t₂) := by
   intro h
   induction L generalizing t₁ t₂
-  case nil => simp ; assumption
-  case cons l L ih =>
-    apply ih
-    induction h
-    case rel h =>
-      constructor
-      cases h
-      case a.base x y h =>
-        grind
-      case a.appL x y z h₁ h₂ =>
-        sorry
-      case a.appR x y z h₁ h₂ =>
-        sorry
-      case a.abs x y s h =>
-        sorry
-    case refl =>
-      apply Relation.EqvGen.refl
-    case symm h ih =>
-      apply Relation.EqvGen.symm _ _ ih
-    case trans h₁ h₂ ih₁ ih₂ =>
-      apply Relation.EqvGen.trans _ _ _ ih₁ ih₂
+  case nil => exact h
+  case cons l L ih => exact ih _ _ (BetaEquiv_open h)
 
 -- Lemma 3.9
 lemma BT_eq_of_BetaEquiv (M N : Term Var) (T1 T2 : BöhmTree Var) (L : List Var) (h_dis : L.Nodup) (hMN : M.BetaEquiv N) (h1 : BT M L T1) (h2 : BT N L T2) : T1 = T2 := by
