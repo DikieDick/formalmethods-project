@@ -10,8 +10,11 @@ namespace LambdaTerms
 universe u
 variable {Var : Type u}
 
-def K     : Term Var := abs (abs $ bvar 1) -- λxy.x
-def Kstar : Term Var := abs (abs $ bvar 0) -- λxy.y
-def I     : Term Var := abs (bvar 0)       -- λx.x
+-- Collection of different λ-terms
+
+def K     : Term Var := abs (abs $ bvar 1)                -- λxy.x = K
+def Kstar : Term Var := abs (abs $ bvar 0)                -- λxy.y = K*
+def I     : Term Var := abs (bvar 0)                      -- λx.x = I
+def II    : Term Var := app (abs $ bvar 0) (abs $ bvar 0) -- II
 
 end LambdaTerms

@@ -16,6 +16,7 @@ def multiBeta (M N : Term Var) : Prop := M ↠βᶠ N
 -- #check Relation.ChurchRosser -- Cslib
 -- #check Relation.church_rosser -- Mathlib
 
+-- From FullBeta prove that multibeta also has the ChurchRosser property
 theorem ChurchRosserMultiBeta : Relation.ChurchRosser (@multiBeta Var) := by
   unfold multiBeta
   intro x y h_equiv
@@ -59,6 +60,7 @@ theorem ChurchRosser (M P₁ P₂ : Term Var) (h₁ : multiBeta M P₁) (h₂ : 
   specialize confl h₁ h₂
   exact confl
 
+-- Two β-equivalent terms share a common reduct
 theorem common_reduct_of_BetaEquiv (M N : Term Var) (h : BetaEquiv M N) :
   ∃ Q : Term Var, multiBeta M Q ∧ multiBeta N Q := by
   induction h with

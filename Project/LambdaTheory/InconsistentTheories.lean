@@ -87,7 +87,7 @@ lemma K_LC {Var : Type u} : (@K Var).LC := by
 
 
 lemma KstarMN_eq_N (M N : Term Var) (hM : M.LC) (hN : N.LC) : app (app Kstar M) N ≡β N := by
-  apply betaEquiv_of_multiBeta
+  apply BetaEquiv_of_MultiBeta
   · constructor
     swap; assumption
     constructor
@@ -123,7 +123,7 @@ instance : CoeFun (Term Var) (fun _ => Term Var → Term Var) where
 
 @[simp]
 lemma KMN_eq_M (M N : Term Var) (hM : M.LC) (hN : N.LC) : app (app K M) N ≡β M := by
-  apply betaEquiv_of_multiBeta
+  apply BetaEquiv_of_MultiBeta
   · apply LC.app
     · apply LC.app
       · exact K_LC

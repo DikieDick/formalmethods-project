@@ -14,6 +14,7 @@ open LT
 
 section LambdaBetaEta
 
+-- Same as λβ but with the η rule added
 inductive ThLambdaBetaEta : Term Var → Term Var → Prop
 | beta (M N) : Beta M N → ThLambdaBetaEta M N
 | app (M N P Q) : ThLambdaBetaEta M N → ThLambdaBetaEta P Q → ThLambdaBetaEta (app M P) (app N Q)

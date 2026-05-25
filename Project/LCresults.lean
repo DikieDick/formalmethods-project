@@ -8,6 +8,7 @@ open Term
 
 universe u
 
+-- abs of LC term is again LC
 @[simp, grind .]
 lemma absLC_of_LC {Var : Type u} [HasFresh Var] {M : Term Var} (h : M.LC): (abs M).LC := by
     apply LC.abs
@@ -43,10 +44,6 @@ lemma LC_rename {Var : Type u} [HasFresh Var] [DecidableEq Var] (x y : Var) {M :
   have h_lcAt : LcAt 0 (M⟦0 ↝ fvar x⟧) := (lcAt_iff_LC (M⟦0 ↝ fvar x⟧)).mpr h
   have h_lcAt_y := lcAt_rename M 0 0 x y h_lcAt
   rwa [← lcAt_iff_LC]
-
-@[simp, grind =]
-lemma test {Var : Type u} [HasFresh Var] (M N : Term Var) (hM : M.LC) : M ^ N = M := by
-  grind only [= open'.eq_1, =_ open_lc]
 
 lemma helper {Var : Type u} [HasFresh Var] (M N : Term Var) (hM : M.LC) (hN : N.LC): app (abs M) N →βᶠ M:= by
   induction M with

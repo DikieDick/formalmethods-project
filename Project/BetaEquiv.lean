@@ -1,24 +1,27 @@
 import Cslib.Languages.LambdaCalculus.LocallyNameless.Untyped.FullBeta
 
+import Project.LambdaTerms
+
 namespace Cslib
 namespace LambdaCalculus.LocallyNameless.Untyped
 
 open Term
+open LambdaTerms
 
 universe u
-variable {Var : Type u} [HasFresh Var] [DecidableEq Var]
+variable {Var : Type u}
+-- [HasFresh Var] [DecidableEq Var]
 
 notation3 t:39 " →βᶠ " t':39 => t ⭢βᶠ t'
 
+-- β-equivalence
+-- transitive reflexive symmetric closure of →βᶠ (FullBeta)
 def Term.BetaEquiv : Term Var → Term Var → Prop :=
   Relation.EqvGen FullBeta
 
+-- Equivalence instance from Term.BetaEquiv
 instance instEquivBetaEquiv : Equivalence (@BetaEquiv Var) :=
   Relation.EqvGen.is_equivalence FullBeta
-
-instance : Setoid (Term Var) :=
-  {r := BetaEquiv
-   iseqv := instEquivBetaEquiv}
 
 notation M " ≡β " N => BetaEquiv M N
 
@@ -31,11 +34,7 @@ lemma BetaEquiv_symm {Var : Type u} {M N : Term Var} (h : M ≡β N) : N ≡β M
 lemma BetaEquiv_refl {Var : Type u} {M : Term Var} : M ≡β M := by
   apply Relation.EqvGen.refl
 
-
-def idTerm := Term.abs $ @Term.bvar ℕ 0
-def betaRedex := Term.app (Term.abs $ @Term.bvar ℕ 0) (Term.abs $ @Term.bvar ℕ 0)
-
-lemma test : betaRedex →βᶠ idTerm := by
+lemma test : (@II Var) →βᶠ I := by
   constructor
   constructor
   apply LC.abs
@@ -45,18 +44,18 @@ lemma test : betaRedex →βᶠ idTerm := by
   grind
   exact Finset.empty
 
-example : betaRedex ↠βᶠ idTerm := by
+example : (@II Var) ↠βᶠ I := by
   apply Relation.ReflTransGen.single
   apply test
 
-example : betaRedex ≡β idTerm := by
+example : (@II Var) ≡β I := by
   apply Relation.EqvGen.rel
   apply test
 
-example : idTerm ≡β idTerm := by
+example : (@I Var) ≡β I := by
   apply Relation.EqvGen.refl
 
-example : idTerm ≡β betaRedex := by
+example : (@I Var) ≡β II := by
   apply Relation.EqvGen.symm
   apply Relation.EqvGen.rel
   apply test
@@ -64,7 +63,10 @@ example : idTerm ≡β betaRedex := by
 def normalForm (M : Term Var) : Prop :=
   ¬∃ N, M ⭢βᶠ N
 
-example : normalForm idTerm := by
+variable [HasFresh Var]
+
+-- The λ-term I is in normal form
+example : normalForm (@I Var) := by
   intro h
   obtain ⟨N, h⟩ := h
   cases h with
@@ -75,14 +77,17 @@ example : normalForm idTerm := by
     cases h with
     | base h => cases h
 
-example : ¬ normalForm betaRedex := by
+-- Our term with a β-redex (II) is *not* in normal form
+example : ¬ normalForm (@II Var) := by
   unfold normalForm
   push Not
-  use idTerm
+  use I
   apply test
 
+variable [DecidableEq Var]
 
-lemma betaEquiv_of_multiBeta (M N : Term Var) (hM : M.LC) (hN : N.LC) : (M ↠βᶠ N) → M ≡β N := by
+-- if M ↠βᶠ N then M ≡β N
+lemma BetaEquiv_of_MultiBeta (M N : Term Var) (hM : M.LC) (hN : N.LC) : (M ↠βᶠ N) → M ≡β N := by
   intro h
   induction h with
   | refl => apply Relation.EqvGen.refl
@@ -98,5 +103,6 @@ lemma betaEquiv_of_multiBeta (M N : Term Var) (hM : M.LC) (hN : N.LC) : (M ↠β
     · exact hm
     · constructor; assumption
 
+-- β-equivalence is preserved under →βᶠ
 lemma BetaEquiv_of_BetaEquiv_and_step {Var : Type u} (M N O : Term Var) (hMN : M.BetaEquiv N) (hNO : N →βᶠ O) : M.BetaEquiv O :=
   Relation.EqvGen.trans M N O hMN (Relation.EqvGen.rel N O hNO)

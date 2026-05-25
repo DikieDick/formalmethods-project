@@ -21,6 +21,7 @@ class LambdaTheory (rel: Term Var → Term Var → Prop) where
   trans (M N P : Term Var) : rel M N → rel N P → rel M P
   sym (M N : Term Var): rel M N → rel N M
 
+-- Minimal λ-theory, contains the same rules as the definition
 inductive ThLambdaBeta : Term Var → Term Var → Prop
 | beta (M N) : Beta M N → ThLambdaBeta M N
 | xi (M N) (xs : Finset Var) : (∀ x ∉ xs, ThLambdaBeta (M ^ fvar x) (N ^ fvar x)) → ThLambdaBeta (abs M) (abs N)
@@ -32,6 +33,7 @@ inductive ThLambdaBeta : Term Var → Term Var → Prop
 instance : @LambdaTheory Var (ThLambdaBeta) :=
   ⟨ThLambdaBeta.beta, ThLambdaBeta.xi, ThLambdaBeta.app, ThLambdaBeta.refl, ThLambdaBeta.trans, ThLambdaBeta.sym⟩
 
+-- β-equivalence between M and N implies M and N are related in λβ
 lemma ThLambdaBeta_of_BetaEquiv {M N : Term Var} (h : M ≡β N) : ThLambdaBeta M N := by
   induction h with
   | rel O P h =>
@@ -58,6 +60,7 @@ lemma ThLambdaBeta_of_BetaEquiv {M N : Term Var} (h : M ≡β N) : ThLambdaBeta 
   | trans O P Q h1 h2 ih1 ih2 =>
     exact ThLambdaBeta.trans O P Q ih1 ih2
 
+-- Being related under λβ implies being related under any other λ-theory
 lemma ThEq_of_ThLambdaBeta {M N : Term Var} {r : Term Var → Term Var → Prop} [LambdaTheory r] (h : ThLambdaBeta M N) : r M N := by
   induction h with
   | beta A B h => apply LambdaTheory.beta; assumption
@@ -119,6 +122,7 @@ lemma app_left₂ {M N : Term Var} (P Q : Term Var) (h : r M N) :
 lemma app_congr {M N P Q : Term Var} (h1 : r M N) (h2 : r P Q) : r (app M P) (app N Q) :=
   LambdaTheory.app M N P Q h1 h2
 
+-- A λ-theory R is inconsistent when ∀ M N, R M N.
 def inconsistent (r : Term Var → Term Var → Prop) [LambdaTheory r] : Prop := ∀ M N : Term Var, M.LC → N.LC → r M N
 
 end LT
