@@ -28,19 +28,19 @@ lemma pair_iff (a b x y : α): pair x y = pair a b ↔ (x=a ∧ y=b) := by
   · intro ⟨hxa, hyb⟩
     congr
 
--- Shorter proof due to fY_set being defined as a the above set
 theorem F_G_eq_id (f : Set α → Set α) (Y : Set α) (h : continuous f ) :
 F (G f) Y = f Y := by
   unfold F G apply
   ext x
   constructor
-  · rintro ⟨y, h₁, _, b, _, h₂⟩
-    simp_all
+  · rintro ⟨y, h₁, _, b, hh, h₂⟩
+    simp_all only [pair_iff]
     have := continuous_monotone h
     exact Set.mem_of_subset_of_mem (this (toSet b) Y h₁) h₂
   · intro _
     obtain ⟨h₁, _⟩ := h Y x
-    simp_all
+    simp_all only [forall_const, Set.mem_setOf_eq, pair_iff, ↓existsAndEq, and_true,
+      exists_eq_left']
     exact Set.mem_of_subset_of_mem (fun _ y ↦ y) h₁
 
 end F_G_equal
