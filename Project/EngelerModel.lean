@@ -33,7 +33,7 @@ F (G f) Y = f Y := by
   unfold F G apply
   ext x
   constructor
-  · rintro ⟨y, h₁, _, b, hh, h₂⟩
+  · rintro ⟨y, h₁, _, b, _, h₂⟩
     simp_all only [pair_iff]
     have := continuous_monotone h
     exact Set.mem_of_subset_of_mem (this (toSet b) Y h₁) h₂
